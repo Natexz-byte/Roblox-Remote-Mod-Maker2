@@ -740,16 +740,16 @@ local function updateDrag(input)
     -- Get screen boundaries
     local viewportSize = workspace.CurrentCamera.ViewportSize
     local frameSize = mainFrame.AbsoluteSize
-    local maxX = viewportSize.X - frameSize.X
-    local maxY = viewportSize.Y - frameSize.Y
+    local maxX = math.max(viewportSize.X - frameSize.X, 0)  -- Ensure maxX is not negative
+    local maxY = math.max(viewportSize.Y - frameSize.Y, 0)  -- Ensure maxY is not negative
     
     -- Clamp position to screen bounds with padding
     local padding = 10
     newPosition = UDim2.new(
         0,
-        math.clamp(newPosition.X.Offset, padding, maxX - padding),
+        math.clamp(newPosition.X.Offset, padding, math.max(maxX - padding, padding)), -- Ensure max is greater than min
         0,
-        math.clamp(newPosition.Y.Offset, padding, maxY - padding)
+        math.clamp(newPosition.Y.Offset, padding, math.max(maxY - padding, padding))  -- Ensure max is greater than min
     )
     
     local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)

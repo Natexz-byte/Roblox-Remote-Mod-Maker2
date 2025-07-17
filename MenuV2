@@ -1,21 +1,37 @@
---// Services
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local player = Players.LocalPlayer
+local function InitializeScript()
+    --// Services
+    local Players = game:GetService("Players")
+    local TweenService = game:GetService("TweenService")
+    local UserInputService = game:GetService("UserInputService")
+    local RunService = game:GetService("RunService")
 
--- Error checking for essential services
-if not player then
-    error("LocalPlayer not found")
-    return
-end
+    -- Make sure we're running on the client
+    if not RunService:IsClient() then return end
 
---// GUI Setup
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "GameModMenu"
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.Parent = player:WaitForChild("PlayerGui")
+    -- Wait for player to load
+    local player
+    if not Players.LocalPlayer then
+        player = Players.LocalPlayer
+        while not player do
+            task.wait()
+            player = Players.LocalPlayer
+        end
+    else
+        player = Players.LocalPlayer
+    end
+
+    --// GUI Setup
+    if not player.PlayerGui then return end
+    
+    -- Remove any existing GUI with the same name
+    local existing = player.PlayerGui:FindFirstChild("GameModMenu")
+    if existing then existing:Destroy() end
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "GameModMenu"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.DisplayOrder = 999999999
+    screenGui.Parent = player.PlayerGui
 
 -- Main Frame with enhanced mobile-first design
 local mainFrame = Instance.new("Frame")
@@ -26,7 +42,6 @@ mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
 
--- Make sure the ScreenGui scales properly on mobile
 if UserInputService.TouchEnabled then
     screenGui.IgnoreGuiInset = true
     mainFrame.Position = UDim2.new(0.5, 0, 0.55, 0) -- Slightly lower to account for mobile notches/cameras
@@ -53,7 +68,6 @@ stroke.Thickness = 1
 stroke.Parent = mainFrame
 
 -- Add modern shadow effect with multiple layers
-local function createShadow(parent, size, offset, transparency)
     local shadow = Instance.new("Frame")
     shadow.Size = UDim2.new(1, size, 1, size)
     shadow.Position = UDim2.new(0, -offset, 0, -offset)
@@ -78,7 +92,6 @@ for _, shadow in ipairs(mainFrame:GetChildren()) do
         local shadowCorner = Instance.new("UICorner")
         shadowCorner.CornerRadius = UDim.new(0, 12)
         shadowCorner.Parent = shadow
-    end
 end
 
 -- Title bar with modern gradient
@@ -178,9 +191,11 @@ tabContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 tabContainer.BorderSizePixel = 0
 tabContainer.ScrollBarThickness = UserInputService.TouchEnabled and 6 or 4
 tabContainer.ScrollingDirection = Enum.ScrollingDirection.X
-tabContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
+tabContainer.CanvasSize = UDim2.new(0, 0, 0, 0)  -- Initialize with zero size
+tabContainer.AutomaticCanvasSize = Enum.AutomaticSize.X  -- Enable automatic sizing
 tabContainer.ScrollingEnabled = true
 tabContainer.ElasticBehavior = Enum.ElasticBehavior.Always
+tabContainer.HorizontalScrollBarInset = Enum.ScrollBarInset.ScrollBar  -- Fix scrollbar overlap
 tabContainer.Parent = mainFrame
 
 local tabCorner = Instance.new("UICorner")
@@ -209,10 +224,10 @@ local contentCorner = Instance.new("UICorner")
 contentCorner.CornerRadius = UDim.new(0, 8)
 contentCorner.Parent = contentContainer
 
--- Create tab pages with improved layout
-local tabPages = {}
-local activeTab = nil
-local tabs = {
+    -- Create tab pages with improved layout
+    local tabPages = {}
+    local activeTab = nil
+    local tabs = {
     {name = "Give", color = Color3.fromRGB(85, 170, 255)},
     {name = "Stats", color = Color3.fromRGB(255, 85, 255)},
     {name = "Currency", color = Color3.fromRGB(255, 170, 0)},
@@ -262,6 +277,8 @@ for _, tabInfo in ipairs(tabs) do
     contentPage.ScrollBarThickness = UserInputService.TouchEnabled and 8 or 6
     contentPage.ScrollingEnabled = true
     contentPage.ElasticBehavior = Enum.ElasticBehavior.Always
+    contentPage.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar  -- Fix scrollbar overlap
+    contentPage.AutomaticCanvasSize = Enum.AutomaticSize.Y  -- Enable automatic sizing
     contentPage.Visible = false
     contentPage.Parent = contentContainer
     
@@ -289,30 +306,63 @@ for _, tabInfo in ipairs(tabs) do
     
     -- Tab button click handler with visual feedback
     tabButton.MouseButton1Click:Connect(function()
-        if activeTab then
-            activeTab.button.BackgroundTransparency = 0.5
-            activeTab.page.Visible = false
+        -- Hide all tabs first
+        for _, tab in pairs(tabPages) do
+            if tab.button and tab.page then
+                tab.button.BackgroundTransparency = 0.5
+                tab.page.Visible = false
+            end
         end
-        activeTab = tabPages[tabInfo.name:lower()]
-        activeTab.button.BackgroundTransparency = 0
-        activeTab.page.Visible = true
         
-        -- Visual feedback
-        local originalColor = tabButton.BackgroundColor3
-        tabButton.BackgroundColor3 = Color3.new(
-            math.min(1, originalColor.R * 1.2),
-            math.min(1, originalColor.G * 1.2),
-            math.min(1, originalColor.B * 1.2)
-        )
-        wait(0.2)
-        tabButton.BackgroundColor3 = originalColor
+        -- Show selected tab
+        activeTab = tabPages[tabInfo.name:lower()]
+        if activeTab then
+            activeTab.button.BackgroundTransparency = 0
+            activeTab.page.Visible = true
+            
+            -- Visual feedback
+            local originalColor = tabButton.BackgroundColor3
+            tabButton.BackgroundColor3 = Color3.new(
+                math.min(1, originalColor.R * 1.2),
+                math.min(1, originalColor.G * 1.2),
+                math.min(1, originalColor.B * 1.2)
+            )
+            task.wait(0.2)
+            tabButton.BackgroundColor3 = originalColor
+            
+            -- Debug print
+            print("Switched to tab:", tabInfo.name, "Page visible:", activeTab.page.Visible)
+        end
+    end)
     end)
 end
 
+-- Create tables if they don't exist
+tabPages = tabPages or {}
+activeTab = nil
+
+-- Initialize all tabs first
+for _, tabInfo in pairs(tabPages) do
+    if type(tabInfo) == "table" then
+        if tabInfo.page and tabInfo.page.Parent then
+            tabInfo.page.Visible = false
+        end
+        if tabInfo.button and tabInfo.button.Parent then
+            tabInfo.button.BackgroundTransparency = 0.5
+        end
+    end
+end
+
 -- Set initial active tab
-activeTab = tabPages["give"]
-activeTab.button.BackgroundTransparency = 0
-activeTab.page.Visible = true
+if tabPages["give"] then
+    activeTab = tabPages["give"]
+    if activeTab.button and activeTab.button.Parent then
+        activeTab.button.BackgroundTransparency = 0
+    end
+    if activeTab.page and activeTab.page.Parent then
+        activeTab.page.Visible = true
+    end
+end
 
 --// Enhanced keyword detection with categories
 local keywords = {
@@ -510,368 +560,6 @@ local function isPlayerRemote(remote)
     if string.find(path, "replicatedstorage") then
         return true
     end
-    
-    -- Check if remote is in StarterGui or StarterPlayer (UI related)
-    if string.find(path, "startergui") or string.find(path, "starterplayer") then
-        return true
-    end
-    
-    return false
-end
-
---// Add remote to UI (improved version with better organization)
-local function addRemote(remote)
-    -- Basic validation with error handling
-    if not remote then 
-        warn("Attempted to add nil remote")
-        return
-    end
-    
-    if not (remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction")) then
-        return
-    end
-    
-    -- Get category before validation to ensure proper categorization
-    local category = getRemoteCategory(remote)
-    if not category then
-        category = "other"
-    end
-    
-    -- Get category and validate tab page exists
-    local category = getRemoteCategory(remote)
-    local tabPage = tabPages[category:lower()]
-    if not tabPage or not tabPage.page then
-        tabPage = tabPages["other"]
-        if not tabPage then return end
-    end
-    
-    -- Create modern container with enhanced visuals
-    local container = Instance.new("Frame")
-    container.Size = UserInputService.TouchEnabled and UDim2.new(1, -16, 0, 100) or UDim2.new(1, -16, 0, 80)
-    container.BorderSizePixel = 0
-    container.Name = remote.Name
-    container.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-    
-    -- Add container gradient
-    local containerGradient = Instance.new("UIGradient")
-    containerGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 70)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 40, 60))
-    })
-    containerGradient.Rotation = 45
-    containerGradient.Parent = container
-    
-    -- Add subtle stroke
-    local containerStroke = Instance.new("UIStroke")
-    containerStroke.Color = Color3.fromRGB(60, 60, 80)
-    containerStroke.Thickness = 1
-    containerStroke.Parent = container
-    
-    -- Enhanced hover effect with animation
-    local function updateHover(transparency)
-        local targetColor = transparency == 1 and 
-            ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 70)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 40, 60))
-            }) or
-            ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 60, 80)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 50, 70))
-            })
-        
-        local gradientInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        TweenService:Create(containerGradient, gradientInfo, {Color = targetColor}):Play()
-    end
-    container.MouseEnter:Connect(function()
-        updateHover(0.8)
-    end)
-    container.MouseLeave:Connect(function()
-        updateHover(1)
-    end)
-    container.Parent = tabPage.page
-
-    -- Add rounded corners
-    local containerCorner = Instance.new("UICorner")
-    containerCorner.CornerRadius = UDim.new(0, 6)
-    containerCorner.Parent = container
-
-    -- Create main elements
-    -- Name label
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(0.6, 0, 0.4, 0)
-    nameLabel.Position = UDim2.new(0, 10, 0, 5)
-    nameLabel.Text = remote.Name
-    nameLabel.TextColor3 = Color3.new(1, 1, 1)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.TextSize = 14
-    nameLabel.TextWrapped = true
-    nameLabel.Parent = container
-
-    -- Path label
-    local fullPath = remote:GetFullName()
-    local shortPath = fullPath:gsub(remote.Name .. "$", "")
-    if #shortPath > 40 then
-        shortPath = "..." .. shortPath:sub(-37)
-    end
-
-    local pathLabel = Instance.new("TextLabel")
-    pathLabel.Size = UDim2.new(0.6, 0, 0.3, 0)
-    pathLabel.Position = UDim2.new(0, 10, 0.4, 0)
-    pathLabel.Text = shortPath
-    pathLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    pathLabel.BackgroundTransparency = 1
-    pathLabel.TextXAlignment = Enum.TextXAlignment.Left
-    pathLabel.Font = Enum.Font.Gotham
-    pathLabel.TextSize = 10
-    pathLabel.TextWrapped = true
-    pathLabel.Parent = container
-
-    -- Type indicator with aligned position
-    local typeLabel = Instance.new("TextLabel")
-    typeLabel.Size = UDim2.new(0.15, 0, 0.3, 0)
-    typeLabel.Position = UDim2.new(0.83, 0, 0.1, 0)  -- Aligned with RUN button
-    local isEvent = remote:IsA("RemoteEvent")
-    typeLabel.Text = isEvent and "EVENT" or "FUNCTION"
-    typeLabel.BackgroundColor3 = isEvent and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(200, 100, 200)
-    typeLabel.TextColor3 = Color3.new(1, 1, 1)
-    typeLabel.Font = Enum.Font.GothamBold
-    typeLabel.TextSize = 10
-    typeLabel.TextXAlignment = Enum.TextXAlignment.Center
-    typeLabel.Parent = container
-
-    local typeCorner = Instance.new("UICorner")
-    typeCorner.CornerRadius = UDim.new(0, 3)
-    typeCorner.Parent = typeLabel
-
-    -- Arguments input
-    local argsInput = Instance.new("TextBox")
-    argsInput.Size = UDim2.new(0.7, 0, 0.3, 0)
-    argsInput.Position = UDim2.new(0, 10, 0.65, 0)
-    argsInput.PlaceholderText = "Arguments (e.g., \"value\", 100, true)"
-    argsInput.Text = ""
-    argsInput.TextColor3 = Color3.new(1, 1, 1)
-    argsInput.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
-    argsInput.PlaceholderColor3 = Color3.fromRGB(130, 130, 150)
-    argsInput.Font = Enum.Font.GothamMedium
-    argsInput.TextSize = 14
-    argsInput.Parent = container
-    
-    -- Add input field effects
-    local inputStroke = Instance.new("UIStroke")
-    inputStroke.Color = Color3.fromRGB(70, 70, 90)
-    inputStroke.Thickness = 1
-    inputStroke.Parent = argsInput
-    
-    -- Add focus/unfocus effects
-    argsInput.Focused:Connect(function()
-        TweenService:Create(inputStroke, TweenInfo.new(0.3), {
-            Color = Color3.fromRGB(100, 100, 255)
-        }):Play()
-    end)
-    
-    argsInput.FocusLost:Connect(function()
-        TweenService:Create(inputStroke, TweenInfo.new(0.3), {
-            Color = Color3.fromRGB(70, 70, 90)
-        }):Play()
-    end)
-
-    local argsCorner = Instance.new("UICorner")
-    argsCorner.CornerRadius = UDim.new(0, 4)
-    argsCorner.Parent = argsInput
-
-    -- Modern execute button with effects
-    local runButton = Instance.new("TextButton")
-    runButton.Size = UDim2.new(0.15, 0, 0.3, 0)
-    runButton.Position = UDim2.new(0.83, 0, 0.65, 0)
-    runButton.Text = "RUN"
-    runButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
-    runButton.TextColor3 = Color3.new(1, 1, 1)
-    runButton.Font = Enum.Font.GothamBold
-    runButton.TextSize = 14
-    runButton.Parent = container
-    
-    -- Add button gradient
-    local buttonGradient = Instance.new("UIGradient")
-    buttonGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 230, 70)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 210, 50))
-    })
-    buttonGradient.Rotation = 45
-    buttonGradient.Parent = runButton
-    
-    -- Add button glow
-    local buttonGlow = Instance.new("ImageLabel")
-    buttonGlow.Size = UDim2.new(1, 10, 1, 10)
-    buttonGlow.Position = UDim2.new(0, -5, 0, -5)
-    buttonGlow.BackgroundTransparency = 1
-    buttonGlow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    buttonGlow.ImageColor3 = Color3.fromRGB(60, 220, 60)
-    buttonGlow.ImageTransparency = 0.7
-    buttonGlow.Parent = runButton
-    
-    -- Add hover effect
-    runButton.MouseEnter:Connect(function()
-        TweenService:Create(buttonGradient, TweenInfo.new(0.3), {
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 240, 80)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 220, 60))
-            })
-        }):Play()
-    end)
-    
-    runButton.MouseLeave:Connect(function()
-        TweenService:Create(buttonGradient, TweenInfo.new(0.3), {
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 230, 70)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 210, 50))
-            })
-        }):Play()
-    end)
-
-    local runCorner = Instance.new("UICorner")
-    runCorner.CornerRadius = UDim.new(0, 4)
-    runCorner.Parent = runButton
-
-    -- Add execute functionality with better error handling and mobile support
-    local function executeRemote()
-        local success, result = pcall(function()
-            local args = parseArgs(argsInput.Text)
-            
-            if remote:IsA("RemoteEvent") then
-                remote:FireServer(unpack(args))
-                return "Remote event fired successfully"
-            else
-                local result = remote:InvokeServer(unpack(args))
-                return result or "Remote function called successfully"
-            end
-        end)
-        
-        if not success then
-            warn("Failed to execute remote:", result)
-            -- Visual feedback for error
-            local originalColor = runButton.BackgroundColor3
-            runButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-            task.wait(0.3)
-            runButton.BackgroundColor3 = originalColor
-        else
-            -- Visual feedback for success
-            local originalColor = runButton.BackgroundColor3
-            runButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-            task.wait(0.3)
-            runButton.BackgroundColor3 = originalColor
-            print("Success:", result)
-        end
-    end
-    
-    -- Add both mouse and touch support
-    runButton.MouseButton1Click:Connect(executeRemote)
-    runButton.TouchTap:Connect(executeRemote)
-    
-    -- Make button more touch-friendly if on mobile
-    if UserInputService.TouchEnabled then
-        runButton.Size = UDim2.new(0.2, 0, 0.3, 0) -- Slightly larger touch target
-    end
-
-    -- Update content size
-    local contentSize = tabPage.layout.AbsoluteContentSize
-    if contentSize then
-        tabPage.page.CanvasSize = UDim2.new(0, 0, 0, contentSize.Y + 10)
-    end
-end
-
---// Enhanced scan function with better error handling
-local function scan(container)
-    if not container then 
-        warn("Attempted to scan nil container")
-        return 
-    end
-    
-    local function processObject(obj)
-        if not obj then return end
-        
-        local success, err = pcall(function()
-            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                print("Found remote:", obj:GetFullName())  -- Debug logging
-                addRemote(obj)
-            end
-        end)
-        
-        if not success then
-            warn("Failed to process remote:", obj:GetFullName(), err)
-        end
-    end
-    
-    -- Scan existing remotes with error handling
-    local success, err = pcall(function()
-        for _, obj in ipairs(container:GetDescendants()) do
-            processObject(obj)
-        end
-    end)
-    
-    if not success then
-        warn("Failed to scan container:", container:GetFullName(), err)
-    end
-    
-    -- Watch for new remotes
-    container.DescendantAdded:Connect(processObject)
-end
-
--- Start scanning process with improved error handling
-local function startScanning()
-    if not title then
-        warn("Title element not initialized")
-        return
-    end
-
-    title.Text = "🔄 Scanning game..."
-    
-    -- Enhanced scanning locations
-    local locations = {
-        game:GetService("ReplicatedStorage"),
-        game:GetService("StarterGui"),
-        game:GetService("StarterPlayer"),
-        game:GetService("Workspace"),
-        game:GetService("ReplicatedFirst"),
-        game:GetService("Players").LocalPlayer.PlayerGui,
-        game:GetService("Players").LocalPlayer.Character,
-        game:GetService("Players").LocalPlayer.Backpack
-    }
-    
-    -- Also scan any current game.Loaded packages
-    for _, instance in ipairs(game:GetChildren()) do
-        if instance:IsA("Folder") or instance:IsA("Model") then
-            table.insert(locations, instance)
-        end
-    end
-    
-    local successCount = 0
-    for _, location in ipairs(locations) do
-        if location then
-            local success = pcall(function()
-                scan(location)
-                successCount = successCount + 1
-            end)
-            if not success then
-                warn("Failed to scan location:", location.Name)
-            end
-        end
-    end
-    
-    -- Update title based on scan results
-    if title and title.Parent then
-        if successCount == #locations then
-            title.Text = "🎮 Game Mod Menu"
-            print("✅ Game Mod Menu: All locations scanned successfully")
-        else
-            title.Text = "🎮 Game Mod Menu (Partial Scan)"
-            warn("⚠️ Some locations failed to scan (" .. successCount .. "/" .. #locations .. " successful)")
-        end
-    end
-end
-
--- Start the scanning process
 task.spawn(startScanning)
 
 --// Close button functionality
@@ -891,9 +579,18 @@ local originalContentPos = contentContainer.Position
 
 local function toggleMinimize()
     minimized = not minimized
-    local targetSize = minimized and UDim2.new(0, 500, 0, 40) or originalSize
+    local targetSize = minimized and 
+        (UserInputService.TouchEnabled and UDim2.new(0.98, 0, 0, 60) or UDim2.new(0, 500, 0, 40)) 
+        or originalSize
     local targetContentSize = minimized and UDim2.new(1, -20, 0, 0) or originalContentSize
     local targetContentPos = minimized and UDim2.new(0, 10, 0, 40) or originalContentPos
+    
+    -- Disable scrolling when minimized
+    for _, tabInfo in pairs(tabPages) do
+        if tabInfo.page then
+            tabInfo.page.ScrollingEnabled = not minimized
+        end
+    end
     
     -- Animate size change
     TweenService:Create(mainFrame, TweenInfo.new(0.3), {Size = targetSize}):Play()
@@ -1050,10 +747,12 @@ titleBar.TouchEnded:Connect(endDrag)
 -- Start scanning is now handled by the startScanning function
 -- Remove duplicate scanning calls
 
--- Start scanning with delay to ensure UI is ready
-task.wait(0.1) -- Small delay to ensure UI is fully initialized
-print("Starting initial scan...")
-startScanning()
+    -- Start scanning with delay to ensure UI is ready
+    task.wait(0.1) -- Small delay to ensure UI is fully initialized
+    startScanning()
+end
 
--- Debug message
-print("UI Initialization completed")
+-- Run the initialization
+task.spawn(function()
+    InitializeScript()
+end)

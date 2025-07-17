@@ -720,56 +720,67 @@ task.spawn(function()
     end
 end)
 
--- Make draggable with mobile support
+-- Make draggable with improved mobile support
 local dragging = false
+local dragInput = nil
 local dragStart = nil
 local startPos = nil
-local lastTouchPosition = nil
+
+local function updateDrag(input)
+    if not dragging then return end
+    
+    local delta = input.Position - dragStart
+    local newPosition = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
+    
+    -- Get screen boundaries
+    local viewportSize = workspace.CurrentCamera.ViewportSize
+    local frameSize = mainFrame.AbsoluteSize
+    local maxX = viewportSize.X - frameSize.X
+    local maxY = viewportSize.Y - frameSize.Y
+    
+    -- Clamp position to screen bounds with padding
+    local padding = 10
+    newPosition = UDim2.new(
+        0,
+        math.clamp(newPosition.X.Offset, padding, maxX - padding),
+        0,
+        math.clamp(newPosition.Y.Offset, padding, maxY - padding)
+    )
+    
+    local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+    TweenService:Create(mainFrame, tweenInfo, {Position = newPosition}):Play()
+end
 
 titleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         startPos = mainFrame.Position
-        if input.UserInputType == Enum.UserInputType.Touch then
-            lastTouchPosition = input.Position
-        end
+        dragInput = input
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta
-        if input.UserInputType == Enum.UserInputType.Touch then
-            if lastTouchPosition then
-                delta = input.Position - lastTouchPosition
-                lastTouchPosition = input.Position
-            else
-                delta = Vector2.new(0, 0)
-            end
-        else
-            delta = input.Position - dragStart
-        end
-        
-        -- Ensure smooth dragging with bounds checking
-        local viewportSize = workspace.CurrentCamera.ViewportSize
-        local newPosition = UDim2.new(
-            startPos.X.Scale,
-            math.clamp(startPos.X.Offset + delta.X, 0, viewportSize.X - mainFrame.AbsoluteSize.X),
-            startPos.Y.Scale,
-            math.clamp(startPos.Y.Offset + delta.Y, 0, viewportSize.Y - mainFrame.AbsoluteSize.Y)
-        )
-        mainFrame.Position = newPosition
-        if input.UserInputType == Enum.UserInputType.Touch then
-            startPos = newPosition -- Update for smoother touch dragging
-        end
+    if input == dragInput and dragging then
+        updateDrag(input)
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+    if input == dragInput then
         dragging = false
-        lastTouchPosition = nil
+        dragInput = nil
     end
 end)
 

@@ -17,38 +17,89 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Main Frame with modern design
+-- Main Frame with modern design and mobile adaptation
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 500, 0, 400)  -- Reduced size
-mainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+mainFrame.Size = UserInputService.TouchEnabled and UDim2.new(0.95, 0, 0.8, 0) or UDim2.new(0, 500, 0, 400)
+mainFrame.Position = UDim2.new(0.5, UserInputService.TouchEnabled and 0 or -250, 0.5, UserInputService.TouchEnabled and 0 or -200)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5) -- Center the frame
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
 
--- Add rounded corners
+-- Add gradient background
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 45)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 35))
+})
+gradient.Rotation = 45
+gradient.Parent = mainFrame
+
+-- Add rounded corners with larger radius
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
+corner.CornerRadius = UDim.new(0, 16)
 corner.Parent = mainFrame
 
--- Add subtle shadow effect
-local shadow = Instance.new("Frame")
-shadow.Size = UDim2.new(1, 6, 1, 6)
-shadow.Position = UDim2.new(0, -3, 0, -3)
-shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-shadow.BackgroundTransparency = 0.7
-shadow.ZIndex = -1
-shadow.Parent = mainFrame
+-- Add subtle stroke
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(60, 60, 80)
+stroke.Thickness = 1
+stroke.Parent = mainFrame
 
-local shadowCorner = Instance.new("UICorner")
-shadowCorner.CornerRadius = UDim.new(0, 12)
-shadowCorner.Parent = shadow
+-- Add modern shadow effect with multiple layers
+local function createShadow(parent, size, offset, transparency)
+    local shadow = Instance.new("Frame")
+    shadow.Size = UDim2.new(1, size, 1, size)
+    shadow.Position = UDim2.new(0, -offset, 0, -offset)
+    shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.BackgroundTransparency = transparency
+    shadow.ZIndex = -1
+    shadow.Parent = parent
 
--- Title bar with gradient
+    local shadowCorner = Instance.new("UICorner")
+    shadowCorner.CornerRadius = UDim.new(0, 12)
+    shadowCorner.Parent = shadow
+end
+
+-- Create layered shadows for depth
+createShadow(mainFrame, 8, 4, 0.85)
+createShadow(mainFrame, 6, 3, 0.8)
+createShadow(mainFrame, 4, 2, 0.75)
+
+-- Add corner radius to each shadow
+for _, shadow in ipairs(mainFrame:GetChildren()) do
+    if shadow:IsA("Frame") and shadow.ZIndex == -1 then
+        local shadowCorner = Instance.new("UICorner")
+        shadowCorner.CornerRadius = UDim.new(0, 12)
+        shadowCorner.Parent = shadow
+    end
+end
+
+-- Title bar with modern gradient
 local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 40)  -- Reduced height
+titleBar.Size = UDim2.new(1, 0, 0, 50)  -- Increased height for better visibility
 titleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 titleBar.BorderSizePixel = 0
 titleBar.Parent = mainFrame
+
+-- Add gradient to title bar
+local titleGradient = Instance.new("UIGradient")
+titleGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(55, 55, 75)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(45, 45, 65))
+})
+titleGradient.Rotation = 45
+titleGradient.Parent = titleBar
+
+-- Add subtle glow effect
+local titleGlow = Instance.new("ImageLabel")
+titleGlow.Size = UDim2.new(1, 20, 1, 20)
+titleGlow.Position = UDim2.new(0, -10, 0, -10)
+titleGlow.BackgroundTransparency = 1
+titleGlow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+titleGlow.ImageColor3 = Color3.fromRGB(255, 255, 255)
+titleGlow.ImageTransparency = 0.9
+titleGlow.Parent = titleBar
 
 local titleCorner = Instance.new("UICorner")
 titleCorner.CornerRadius = UDim.new(0, 12)
@@ -479,19 +530,42 @@ local function addRemote(remote)
         if not tabPage then return end
     end
     
-    -- Create container
+    -- Create modern container with enhanced visuals
     local container = Instance.new("Frame")
-    container.Size = UserInputService.TouchEnabled and UDim2.new(1, -10, 0, 90) or UDim2.new(1, -10, 0, 70)
+    container.Size = UserInputService.TouchEnabled and UDim2.new(1, -16, 0, 100) or UDim2.new(1, -16, 0, 80)
     container.BorderSizePixel = 0
     container.Name = remote.Name
-    container.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    -- Add hover effect
+    container.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+    
+    -- Add container gradient
+    local containerGradient = Instance.new("UIGradient")
+    containerGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 70)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 40, 60))
+    })
+    containerGradient.Rotation = 45
+    containerGradient.Parent = container
+    
+    -- Add subtle stroke
+    local containerStroke = Instance.new("UIStroke")
+    containerStroke.Color = Color3.fromRGB(60, 60, 80)
+    containerStroke.Thickness = 1
+    containerStroke.Parent = container
+    
+    -- Enhanced hover effect with animation
     local function updateHover(transparency)
-        container.BackgroundColor3 = Color3.fromRGB(
-            math.min(40 + (1-transparency) * 20, 255),
-            math.min(40 + (1-transparency) * 20, 255),
-            math.min(60 + (1-transparency) * 20, 255)
-        )
+        local targetColor = transparency == 1 and 
+            ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 70)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 40, 60))
+            }) or
+            ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 60, 80)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 50, 70))
+            })
+        
+        local gradientInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        TweenService:Create(containerGradient, gradientInfo, {Color = targetColor}):Play()
     end
     container.MouseEnter:Connect(function()
         updateHover(0.8)
@@ -563,26 +637,83 @@ local function addRemote(remote)
     argsInput.PlaceholderText = "Arguments (e.g., \"value\", 100, true)"
     argsInput.Text = ""
     argsInput.TextColor3 = Color3.new(1, 1, 1)
-    argsInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    argsInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-    argsInput.Font = Enum.Font.Gotham
-    argsInput.TextSize = 12
+    argsInput.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+    argsInput.PlaceholderColor3 = Color3.fromRGB(130, 130, 150)
+    argsInput.Font = Enum.Font.GothamMedium
+    argsInput.TextSize = 14
     argsInput.Parent = container
+    
+    -- Add input field effects
+    local inputStroke = Instance.new("UIStroke")
+    inputStroke.Color = Color3.fromRGB(70, 70, 90)
+    inputStroke.Thickness = 1
+    inputStroke.Parent = argsInput
+    
+    -- Add focus/unfocus effects
+    argsInput.Focused:Connect(function()
+        TweenService:Create(inputStroke, TweenInfo.new(0.3), {
+            Color = Color3.fromRGB(100, 100, 255)
+        }):Play()
+    end)
+    
+    argsInput.FocusLost:Connect(function()
+        TweenService:Create(inputStroke, TweenInfo.new(0.3), {
+            Color = Color3.fromRGB(70, 70, 90)
+        }):Play()
+    end)
 
     local argsCorner = Instance.new("UICorner")
     argsCorner.CornerRadius = UDim.new(0, 4)
     argsCorner.Parent = argsInput
 
-    -- Execute button with updated text
+    -- Modern execute button with effects
     local runButton = Instance.new("TextButton")
     runButton.Size = UDim2.new(0.15, 0, 0.3, 0)
-    runButton.Position = UDim2.new(0.83, 0, 0.65, 0)  -- Aligned with EVENT/FUNCTION label
+    runButton.Position = UDim2.new(0.83, 0, 0.65, 0)
     runButton.Text = "RUN"
-    runButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+    runButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
     runButton.TextColor3 = Color3.new(1, 1, 1)
     runButton.Font = Enum.Font.GothamBold
-    runButton.TextSize = 12
+    runButton.TextSize = 14
     runButton.Parent = container
+    
+    -- Add button gradient
+    local buttonGradient = Instance.new("UIGradient")
+    buttonGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 230, 70)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 210, 50))
+    })
+    buttonGradient.Rotation = 45
+    buttonGradient.Parent = runButton
+    
+    -- Add button glow
+    local buttonGlow = Instance.new("ImageLabel")
+    buttonGlow.Size = UDim2.new(1, 10, 1, 10)
+    buttonGlow.Position = UDim2.new(0, -5, 0, -5)
+    buttonGlow.BackgroundTransparency = 1
+    buttonGlow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    buttonGlow.ImageColor3 = Color3.fromRGB(60, 220, 60)
+    buttonGlow.ImageTransparency = 0.7
+    buttonGlow.Parent = runButton
+    
+    -- Add hover effect
+    runButton.MouseEnter:Connect(function()
+        TweenService:Create(buttonGradient, TweenInfo.new(0.3), {
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 240, 80)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 220, 60))
+            })
+        }):Play()
+    end)
+    
+    runButton.MouseLeave:Connect(function()
+        TweenService:Create(buttonGradient, TweenInfo.new(0.3), {
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 230, 70)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 210, 50))
+            })
+        }):Play()
+    end)
 
     local runCorner = Instance.new("UICorner")
     runCorner.CornerRadius = UDim.new(0, 4)
@@ -760,92 +891,6 @@ if UserInputService.TouchEnabled then
     searchBar.TextSize = 16
 end
 
---// Scan for remotes (fixed version)
-local function scan(container)
-    if not container or typeof(container) ~= "Instance" then
-        warn("Invalid container provided to scan function")
-        return
-    end
-    
-    local function addRemoteIfValid(obj)
-        if not obj or not obj.Parent then return end
-        
-        local success, err = pcall(function()
-            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                task.spawn(function()
-                    addRemote(obj)
-                end)
-            end
-        end)
-        
-        if not success then
-            warn("Failed to process remote: " .. obj:GetFullName() .. " - " .. tostring(err))
-        end
-    end
-    
-    -- Scan existing objects with error handling
-    local success, err = pcall(function()
-        for _, obj in ipairs(container:GetDescendants()) do
-            addRemoteIfValid(obj)
-        end
-    end)
-    
-    if not success then
-        warn("Failed to scan container: " .. container:GetFullName() .. " - " .. tostring(err))
-    end
-    
-    -- Watch for new objects with error handling
-    container.DescendantAdded:Connect(function(obj)
-        addRemoteIfValid(obj)
-    end)
-end
-
--- Start scanning with proper error handling and status updates
-title.Text = "🔄 Scanning game..."
-
-local function scanGame()
-    local scanLocations = {
-        game:GetService("ReplicatedStorage"),
-        game:GetService("StarterGui"),
-        game:GetService("StarterPlayer"),
-        game:GetService("Workspace"),
-        game:GetService("ReplicatedFirst"),
-        game:GetService("StarterPack")
-    }
-    
-    local successCount = 0
-    for _, location in ipairs(scanLocations) do
-        local success = pcall(function()
-            if location then
-                scan(location)
-                successCount = successCount + 1
-            end
-        end)
-        
-        if not success then
-            warn("Failed to scan location: " .. location.Name)
-        end
-    end
-    
-    -- Update title based on scan results
-    if successCount == #scanLocations then
-        title.Text = "🎮 Game Mod Menu"
-        print("✅ Game Mod Menu loaded successfully!")
-    else
-        title.Text = "🎮 Game Mod Menu (Partial Scan)"
-        warn("⚠️ Some locations could not be scanned (" .. successCount .. "/" .. #scanLocations .. " successful)")
-    end
-end
-
--- Run scanning in protected thread
-task.spawn(function()
-    local success, err = pcall(scanGame)
-    if not success then
-        warn("❌ Critical error during scanning: " .. tostring(err))
-        title.Text = "🎮 Game Mod Menu (Error)"
-    end
-end)
-
 -- Make draggable (with enhanced mobile support)
 local dragging = false
 local dragStart = nil
@@ -956,46 +1001,5 @@ titleBar.TouchEnded:Connect(endDrag)
 -- Variable to track if we've already scanned
 local hasScanned = false
 
---// Fixed scanning function with better error handling and duplicate prevention
-local function scan(container)
-    if hasScanned then return end -- Prevent duplicate scanning
-    
-    if not container or not container:IsA("Instance") then
-        warn("Invalid container for scanning")
-        return
-    end
-
-    local scannedRemotes = {}
-    
-    local function processObject(obj)
-        if not obj or not obj:IsA("Instance") then return end
-        
-        -- Check if we've already processed this remote
-        if scannedRemotes[obj] then return end
-        
-        local success, err = pcall(function()
-            if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and obj.Parent then
-                scannedRemotes[obj] = true
-                addRemote(obj)
-            end
-        end)
-        
-        if not success then
-            warn("Failed to process object:", obj:GetFullName(), err)
-        end
-    end
-
-    -- Scan existing objects
-    local success, err = pcall(function()
-        for _, obj in ipairs(container:GetDescendants()) do
-            processObject(obj)
-        end
-    end)
-
-    if not success then
-        warn("Failed to scan container:", container:GetFullName(), err)
-    end
-
-    -- Watch for new objects
-    container.DescendantAdded:Connect(processObject)
-end
+-- The scan function is already defined above
+-- No duplicate function needed here

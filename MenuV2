@@ -17,95 +17,38 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Main Frame with enhanced mobile-first design
+-- Main Frame with modern design
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UserInputService.TouchEnabled and UDim2.new(0.98, 0, 0.9, 0) or UDim2.new(0, 500, 0, 400)
-mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-mainFrame.AnchorPoint = Vector2.new(0.5, 0.5) -- Center the frame
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+mainFrame.Size = UDim2.new(0, 500, 0, 400)  -- Reduced size
+mainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
 
--- Make sure the ScreenGui scales properly on mobile
-if UserInputService.TouchEnabled then
-    screenGui.IgnoreGuiInset = true
-    mainFrame.Position = UDim2.new(0.5, 0, 0.55, 0) -- Slightly lower to account for mobile notches/cameras
-end
-
--- Add gradient background
-local gradient = Instance.new("UIGradient")
-gradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 45)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 35))
-})
-gradient.Rotation = 45
-gradient.Parent = mainFrame
-
--- Add rounded corners with larger radius
+-- Add rounded corners
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 16)
+corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = mainFrame
 
--- Add subtle stroke
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(60, 60, 80)
-stroke.Thickness = 1
-stroke.Parent = mainFrame
+-- Add subtle shadow effect
+local shadow = Instance.new("Frame")
+shadow.Size = UDim2.new(1, 6, 1, 6)
+shadow.Position = UDim2.new(0, -3, 0, -3)
+shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+shadow.BackgroundTransparency = 0.7
+shadow.ZIndex = -1
+shadow.Parent = mainFrame
 
--- Add modern shadow effect with multiple layers
-local function createShadow(parent, size, offset, transparency)
-    local shadow = Instance.new("Frame")
-    shadow.Size = UDim2.new(1, size, 1, size)
-    shadow.Position = UDim2.new(0, -offset, 0, -offset)
-    shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    shadow.BackgroundTransparency = transparency
-    shadow.ZIndex = -1
-    shadow.Parent = parent
+local shadowCorner = Instance.new("UICorner")
+shadowCorner.CornerRadius = UDim.new(0, 12)
+shadowCorner.Parent = shadow
 
-    local shadowCorner = Instance.new("UICorner")
-    shadowCorner.CornerRadius = UDim.new(0, 12)
-    shadowCorner.Parent = shadow
-end
-
--- Create layered shadows for depth
-createShadow(mainFrame, 8, 4, 0.85)
-createShadow(mainFrame, 6, 3, 0.8)
-createShadow(mainFrame, 4, 2, 0.75)
-
--- Add corner radius to each shadow
-for _, shadow in ipairs(mainFrame:GetChildren()) do
-    if shadow:IsA("Frame") and shadow.ZIndex == -1 then
-        local shadowCorner = Instance.new("UICorner")
-        shadowCorner.CornerRadius = UDim.new(0, 12)
-        shadowCorner.Parent = shadow
-    end
-end
-
--- Title bar with modern gradient
+-- Title bar with gradient
 local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 50)  -- Increased height for better visibility
+titleBar.Size = UDim2.new(1, 0, 0, 40)  -- Reduced height
 titleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
 titleBar.BorderSizePixel = 0
 titleBar.Parent = mainFrame
-
--- Add gradient to title bar
-local titleGradient = Instance.new("UIGradient")
-titleGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(55, 55, 75)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(45, 45, 65))
-})
-titleGradient.Rotation = 45
-titleGradient.Parent = titleBar
-
--- Add subtle glow effect
-local titleGlow = Instance.new("ImageLabel")
-titleGlow.Size = UDim2.new(1, 20, 1, 20)
-titleGlow.Position = UDim2.new(0, -10, 0, -10)
-titleGlow.BackgroundTransparency = 1
-titleGlow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-titleGlow.ImageColor3 = Color3.fromRGB(255, 255, 255)
-titleGlow.ImageTransparency = 0.9
-titleGlow.Parent = titleBar
 
 local titleCorner = Instance.new("UICorner")
 titleCorner.CornerRadius = UDim.new(0, 12)
@@ -170,17 +113,14 @@ local searchCorner = Instance.new("UICorner")
 searchCorner.CornerRadius = UDim.new(0, 6)
 searchCorner.Parent = searchBar
 
--- Create tab system with enhanced mobile scrolling
+-- Create tab system with scrolling
 local tabContainer = Instance.new("ScrollingFrame")
-tabContainer.Size = UserInputService.TouchEnabled and UDim2.new(1, -16, 0, 50) or UDim2.new(1, -20, 0, 40)
-tabContainer.Position = UDim2.new(0, UserInputService.TouchEnabled and 8 or 10, 0, UserInputService.TouchEnabled and 70 or 60)
+tabContainer.Size = UDim2.new(1, -20, 0, 40)
+tabContainer.Position = UDim2.new(0, 10, 0, 60)
 tabContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 tabContainer.BorderSizePixel = 0
-tabContainer.ScrollBarThickness = UserInputService.TouchEnabled and 6 or 4
+tabContainer.ScrollBarThickness = 4
 tabContainer.ScrollingDirection = Enum.ScrollingDirection.X
-tabContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
-tabContainer.ScrollingEnabled = true
-tabContainer.ElasticBehavior = Enum.ElasticBehavior.Always
 tabContainer.Parent = mainFrame
 
 local tabCorner = Instance.new("UICorner")
@@ -197,10 +137,10 @@ tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     tabContainer.CanvasSize = UDim2.new(0, tabLayout.AbsoluteContentSize.X + 10, 0, 0)
 end)
 
--- Content container for each tab with enhanced mobile layout
+-- Content container for each tab
 local contentContainer = Instance.new("Frame")
-contentContainer.Size = UserInputService.TouchEnabled and UDim2.new(1, -10, 1, -120) or UDim2.new(1, -20, 1, -110)
-contentContainer.Position = UserInputService.TouchEnabled and UDim2.new(0, 5, 0, 110) or UDim2.new(0, 10, 0, 110)
+contentContainer.Size = UDim2.new(1, -20, 1, -110)
+contentContainer.Position = UDim2.new(0, 10, 0, 110)
 contentContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 contentContainer.BorderSizePixel = 0
 contentContainer.Parent = mainFrame
@@ -225,52 +165,31 @@ local tabs = {
 }
 
 for _, tabInfo in ipairs(tabs) do
-    -- Create tab button with adaptive width for mobile
+    -- Create tab button with fixed width
     local tabButton = Instance.new("TextButton")
-    tabButton.Size = UserInputService.TouchEnabled and UDim2.new(0, 120, 1, -10) or UDim2.new(0, 100, 1, -10)
+    tabButton.Size = UDim2.new(0, 100, 1, -10)
     tabButton.Position = UDim2.new(0, 5, 0, 5)
     tabButton.BackgroundColor3 = tabInfo.color
     tabButton.BackgroundTransparency = 0.5
     tabButton.Text = tabInfo.name
     tabButton.TextColor3 = Color3.new(1, 1, 1)
     tabButton.Font = Enum.Font.GothamBold
-    tabButton.TextSize = UserInputService.TouchEnabled and 16 or 14
+    tabButton.TextSize = 14
     tabButton.Parent = tabContainer
-    
-    -- Add hover and press effects
-    tabButton.MouseEnter:Connect(function()
-        if tabButton ~= activeTab then
-            tabButton.BackgroundTransparency = 0.3
-        end
-    end)
-    tabButton.MouseLeave:Connect(function()
-        if tabButton ~= activeTab then
-            tabButton.BackgroundTransparency = 0.5
-        end
-    end)
     
     local tabButtonCorner = Instance.new("UICorner")
     tabButtonCorner.CornerRadius = UDim.new(0, 6)
     tabButtonCorner.Parent = tabButton
     
-    -- Create content page with enhanced mobile scrolling
+    -- Create content page with auto-sizing
     local contentPage = Instance.new("ScrollingFrame")
-    contentPage.Size = UDim2.new(1, UserInputService.TouchEnabled and -16 or -10, 1, UserInputService.TouchEnabled and -16 or -10)
-    contentPage.Position = UDim2.new(0, UserInputService.TouchEnabled and 8 or 5, 0, UserInputService.TouchEnabled and 8 or 5)
+    contentPage.Size = UDim2.new(1, -10, 1, -10)
+    contentPage.Position = UDim2.new(0, 5, 0, 5)
     contentPage.BackgroundTransparency = 1
     contentPage.BorderSizePixel = 0
-    contentPage.ScrollBarThickness = UserInputService.TouchEnabled and 8 or 6
-    contentPage.ScrollingEnabled = true
-    contentPage.ElasticBehavior = Enum.ElasticBehavior.Always
+    contentPage.ScrollBarThickness = 6
     contentPage.Visible = false
     contentPage.Parent = contentContainer
-    
-    -- Add momentum scrolling for mobile
-    if UserInputService.TouchEnabled then
-        contentPage.ScrollingFrequency = 0
-        contentPage.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
-        contentPage.ScrollBarImageTransparency = 0.7
-    end
     
     local contentLayout = Instance.new("UIListLayout")
     contentLayout.Padding = UDim.new(0, 5)
@@ -548,49 +467,12 @@ local function addRemote(remote)
         if not tabPage then return end
     end
     
-    -- Create modern container with enhanced visuals
+    -- Create container
     local container = Instance.new("Frame")
-    container.Size = UserInputService.TouchEnabled and UDim2.new(1, -16, 0, 100) or UDim2.new(1, -16, 0, 80)
+    container.Size = UDim2.new(1, -10, 0, 70)
     container.BorderSizePixel = 0
     container.Name = remote.Name
-    container.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-    
-    -- Add container gradient
-    local containerGradient = Instance.new("UIGradient")
-    containerGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 70)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 40, 60))
-    })
-    containerGradient.Rotation = 45
-    containerGradient.Parent = container
-    
-    -- Add subtle stroke
-    local containerStroke = Instance.new("UIStroke")
-    containerStroke.Color = Color3.fromRGB(60, 60, 80)
-    containerStroke.Thickness = 1
-    containerStroke.Parent = container
-    
-    -- Enhanced hover effect with animation
-    local function updateHover(transparency)
-        local targetColor = transparency == 1 and 
-            ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 70)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 40, 60))
-            }) or
-            ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 60, 80)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 50, 70))
-            })
-        
-        local gradientInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        TweenService:Create(containerGradient, gradientInfo, {Color = targetColor}):Play()
-    end
-    container.MouseEnter:Connect(function()
-        updateHover(0.8)
-    end)
-    container.MouseLeave:Connect(function()
-        updateHover(1)
-    end)
+    container.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
     container.Parent = tabPage.page
 
     -- Add rounded corners
@@ -655,83 +537,26 @@ local function addRemote(remote)
     argsInput.PlaceholderText = "Arguments (e.g., \"value\", 100, true)"
     argsInput.Text = ""
     argsInput.TextColor3 = Color3.new(1, 1, 1)
-    argsInput.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
-    argsInput.PlaceholderColor3 = Color3.fromRGB(130, 130, 150)
-    argsInput.Font = Enum.Font.GothamMedium
-    argsInput.TextSize = 14
+    argsInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    argsInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    argsInput.Font = Enum.Font.Gotham
+    argsInput.TextSize = 12
     argsInput.Parent = container
-    
-    -- Add input field effects
-    local inputStroke = Instance.new("UIStroke")
-    inputStroke.Color = Color3.fromRGB(70, 70, 90)
-    inputStroke.Thickness = 1
-    inputStroke.Parent = argsInput
-    
-    -- Add focus/unfocus effects
-    argsInput.Focused:Connect(function()
-        TweenService:Create(inputStroke, TweenInfo.new(0.3), {
-            Color = Color3.fromRGB(100, 100, 255)
-        }):Play()
-    end)
-    
-    argsInput.FocusLost:Connect(function()
-        TweenService:Create(inputStroke, TweenInfo.new(0.3), {
-            Color = Color3.fromRGB(70, 70, 90)
-        }):Play()
-    end)
 
     local argsCorner = Instance.new("UICorner")
     argsCorner.CornerRadius = UDim.new(0, 4)
     argsCorner.Parent = argsInput
 
-    -- Modern execute button with effects
+    -- Execute button with updated text
     local runButton = Instance.new("TextButton")
     runButton.Size = UDim2.new(0.15, 0, 0.3, 0)
-    runButton.Position = UDim2.new(0.83, 0, 0.65, 0)
+    runButton.Position = UDim2.new(0.83, 0, 0.65, 0)  -- Aligned with EVENT/FUNCTION label
     runButton.Text = "RUN"
-    runButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
+    runButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
     runButton.TextColor3 = Color3.new(1, 1, 1)
     runButton.Font = Enum.Font.GothamBold
-    runButton.TextSize = 14
+    runButton.TextSize = 12
     runButton.Parent = container
-    
-    -- Add button gradient
-    local buttonGradient = Instance.new("UIGradient")
-    buttonGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 230, 70)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 210, 50))
-    })
-    buttonGradient.Rotation = 45
-    buttonGradient.Parent = runButton
-    
-    -- Add button glow
-    local buttonGlow = Instance.new("ImageLabel")
-    buttonGlow.Size = UDim2.new(1, 10, 1, 10)
-    buttonGlow.Position = UDim2.new(0, -5, 0, -5)
-    buttonGlow.BackgroundTransparency = 1
-    buttonGlow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    buttonGlow.ImageColor3 = Color3.fromRGB(60, 220, 60)
-    buttonGlow.ImageTransparency = 0.7
-    buttonGlow.Parent = runButton
-    
-    -- Add hover effect
-    runButton.MouseEnter:Connect(function()
-        TweenService:Create(buttonGradient, TweenInfo.new(0.3), {
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 240, 80)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 220, 60))
-            })
-        }):Play()
-    end)
-    
-    runButton.MouseLeave:Connect(function()
-        TweenService:Create(buttonGradient, TweenInfo.new(0.3), {
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 230, 70)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 210, 50))
-            })
-        }):Play()
-    end)
 
     local runCorner = Instance.new("UICorner")
     runCorner.CornerRadius = UDim.new(0, 4)
@@ -889,101 +714,130 @@ end
 minimizeButton.MouseButton1Click:Connect(toggleMinimize)
 minimizeButton.TouchTap:Connect(toggleMinimize)
 
--- Enhanced mobile support with improved touch targets and spacing
+-- Make minimize button more visible on mobile
 if UserInputService.TouchEnabled then
-    -- Title bar adjustments for mobile
-    titleBar.Size = UDim2.new(1, 0, 0, 60) -- Taller header for better touch targets
-    
-    -- Make minimize button more visible and touchable
-    minimizeButton.Size = UDim2.new(0, 60, 0, 45)
-    minimizeButton.TextSize = 28
-    minimizeButton.Position = UDim2.new(1, -115, 0, 7)
-    minimizeButton.BackgroundTransparency = 0
-    
-    -- Enhance close button for mobile
-    closeButton.Size = UDim2.new(0, 60, 0, 45)
-    closeButton.TextSize = 28
-    closeButton.Position = UDim2.new(1, -50, 0, 7)
-    closeButton.BackgroundTransparency = 0
-    
-    -- Adjust search bar for mobile
-    searchBar.Size = UDim2.new(0, 200, 0, 45)
-    searchBar.Position = UDim2.new(1, -280, 0, 7)
-    searchBar.TextSize = 18
-    searchBar.PlaceholderText = "🔍 Search"
-    
-    -- Adjust title for mobile
-    title.TextSize = 20
-    title.Position = UDim2.new(0, 15, 0, 0)
-    title.Size = UDim2.new(0.4, 0, 1, 0)
+    minimizeButton.Size = UDim2.new(0, 40, 0, 30) -- Larger touch target
+    minimizeButton.TextSize = 20 -- Larger text
+    minimizeButton.Position = UDim2.new(1, -80, 0, 5) -- Adjust position
 end
 
--- Make draggable (with enhanced mobile support)
+--// Scan for remotes (fixed version)
+local function scan(container)
+    if not container or typeof(container) ~= "Instance" then
+        warn("Invalid container provided to scan function")
+        return
+    end
+    
+    local function addRemoteIfValid(obj)
+        if not obj or not obj.Parent then return end
+        
+        local success, err = pcall(function()
+            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                task.spawn(function()
+                    addRemote(obj)
+                end)
+            end
+        end)
+        
+        if not success then
+            warn("Failed to process remote: " .. obj:GetFullName() .. " - " .. tostring(err))
+        end
+    end
+    
+    -- Scan existing objects with error handling
+    local success, err = pcall(function()
+        for _, obj in ipairs(container:GetDescendants()) do
+            addRemoteIfValid(obj)
+        end
+    end)
+    
+    if not success then
+        warn("Failed to scan container: " .. container:GetFullName() .. " - " .. tostring(err))
+    end
+    
+    -- Watch for new objects with error handling
+    container.DescendantAdded:Connect(function(obj)
+        addRemoteIfValid(obj)
+    end)
+end
+
+-- Start scanning with proper error handling and status updates
+title.Text = "🔄 Scanning game..."
+
+local function scanGame()
+    local scanLocations = {
+        game:GetService("ReplicatedStorage"),
+        game:GetService("StarterGui"),
+        game:GetService("StarterPlayer"),
+        game:GetService("Workspace"),
+        game:GetService("ReplicatedFirst"),
+        game:GetService("StarterPack")
+    }
+    
+    local successCount = 0
+    for _, location in ipairs(scanLocations) do
+        local success = pcall(function()
+            if location then
+                scan(location)
+                successCount = successCount + 1
+            end
+        end)
+        
+        if not success then
+            warn("Failed to scan location: " .. location.Name)
+        end
+    end
+    
+    -- Update title based on scan results
+    if successCount == #scanLocations then
+        title.Text = "🎮 Game Mod Menu"
+        print("✅ Game Mod Menu loaded successfully!")
+    else
+        title.Text = "🎮 Game Mod Menu (Partial Scan)"
+        warn("⚠️ Some locations could not be scanned (" .. successCount .. "/" .. #scanLocations .. " successful)")
+    end
+end
+
+-- Run scanning in protected thread
+task.spawn(function()
+    local success, err = pcall(scanGame)
+    if not success then
+        warn("❌ Critical error during scanning: " .. tostring(err))
+        title.Text = "🎮 Game Mod Menu (Error)"
+    end
+end)
+
+-- Make draggable (with mobile support)
 local dragging = false
 local dragStart = nil
 local startPos = nil
-local lastTouchPosition = nil
 local isMobile = UserInputService.TouchEnabled
 
 local function beginDrag(input)
-    if isMobile and input.UserInputType == Enum.UserInputType.Touch then
-        lastTouchPosition = input.Position
-    end
     dragging = true
     dragStart = input.Position
     startPos = mainFrame.Position
-    
-    -- Visual feedback for drag start
-    if isMobile then
-        titleBar.BackgroundColor3 = Color3.fromRGB(55, 55, 75)
-    end
 end
 
 local function updateDrag(input)
     if dragging and dragStart and startPos then
-        local currentPosition = input.Position
-        local delta
-        
-        if isMobile then
-            -- Use touch position tracking for smoother mobile dragging
-            if lastTouchPosition then
-                delta = currentPosition - lastTouchPosition
-                dragStart = currentPosition
-            else
-                delta = Vector2.new(0, 0)
-            end
-            lastTouchPosition = currentPosition
-        else
-            delta = currentPosition - dragStart
-        end
-        
+        local delta = input.Position - dragStart
         -- Only update if the delta is valid
         if typeof(delta) == "Vector2" then
-            local newPosition = UDim2.new(
-                startPos.X.Scale, 
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale, 
-                startPos.Y.Offset + delta.Y
-            )
-            
-            -- Add bounds checking to keep GUI on screen with padding
+            local newPosition = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            -- Add bounds checking to keep GUI on screen
             local viewportSize = workspace.CurrentCamera.ViewportSize
             local frameSize = mainFrame.AbsoluteSize
-            local padding = isMobile and 10 or 0 -- Extra padding for mobile
             
+            -- Ensure we have valid numbers
             if viewportSize and frameSize then
                 newPosition = UDim2.new(
                     newPosition.X.Scale,
-                    math.clamp(newPosition.X.Offset, padding, viewportSize.X - frameSize.X - padding),
+                    math.clamp(newPosition.X.Offset, 0, viewportSize.X - frameSize.X),
                     newPosition.Y.Scale,
-                    math.clamp(newPosition.Y.Offset, padding, viewportSize.Y - frameSize.Y - padding)
+                    math.clamp(newPosition.Y.Offset, 0, viewportSize.Y - frameSize.Y)
                 )
-                
-                -- Smoothly update position
                 mainFrame.Position = newPosition
-                if isMobile then
-                    startPos = newPosition -- Update start position for smoother mobile dragging
-                end
             end
         end
     end
@@ -991,11 +845,6 @@ end
 
 local function endDrag()
     dragging = false
-    lastTouchPosition = nil
-    -- Reset visual feedback
-    if isMobile then
-        titleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-    end
 end
 
 -- Mouse support
@@ -1025,5 +874,49 @@ titleBar.TouchEnded:Connect(endDrag)
 -- Start scanning is now handled by the startScanning function
 -- Remove duplicate scanning calls
 
--- Start initial scan
-startScanning()
+-- Variable to track if we've already scanned
+local hasScanned = false
+
+--// Fixed scanning function with better error handling and duplicate prevention
+local function scan(container)
+    if hasScanned then return end -- Prevent duplicate scanning
+    
+    if not container or not container:IsA("Instance") then
+        warn("Invalid container for scanning")
+        return
+    end
+
+    local scannedRemotes = {}
+    
+    local function processObject(obj)
+        if not obj or not obj:IsA("Instance") then return end
+        
+        -- Check if we've already processed this remote
+        if scannedRemotes[obj] then return end
+        
+        local success, err = pcall(function()
+            if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and obj.Parent then
+                scannedRemotes[obj] = true
+                addRemote(obj)
+            end
+        end)
+        
+        if not success then
+            warn("Failed to process object:", obj:GetFullName(), err)
+        end
+    end
+
+    -- Scan existing objects
+    local success, err = pcall(function()
+        for _, obj in ipairs(container:GetDescendants()) do
+            processObject(obj)
+        end
+    end)
+
+    if not success then
+        warn("Failed to scan container:", container:GetFullName(), err)
+    end
+
+    -- Watch for new objects
+    container.DescendantAdded:Connect(processObject)
+end

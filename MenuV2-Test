@@ -517,17 +517,35 @@ local function addRemote(remote)
     runCorner.CornerRadius = UDim.new(0, 4)
     runCorner.Parent = runButton
 
-    -- Add execute functionality
+    -- Add execute functionality with better error handling
     runButton.MouseButton1Click:Connect(function()
         local args = parseArgs(argsInput.Text)
         
-        if remote:IsA("RemoteEvent") then
-            remote:FireServer(unpack(args))
-        else
-            local result = remote:InvokeServer(unpack(args))
-            if result then
-                print("Result:", result)
+        local success, result = pcall(function()
+            if remote:IsA("RemoteEvent") then
+                remote:FireServer(table.unpack(args))
+                return "Event fired successfully"
+            else
+                return remote:InvokeServer(table.unpack(args))
             end
+        end)
+        
+        if success then
+            if result then
+                print("✅ Success:", remote.Name, "->", tostring(result))
+                -- Visual feedback for success
+                local originalColor = runButton.BackgroundColor3
+                runButton.BackgroundColor3 = Color3.fromRGB(60, 220, 60)
+                task.wait(0.2)
+                runButton.BackgroundColor3 = originalColor
+            end
+        else
+            warn("❌ Failed to execute remote:", remote.Name, "->", tostring(result))
+            -- Visual feedback for failure
+            local originalColor = runButton.BackgroundColor3
+            runButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+            task.wait(0.2)
+            runButton.BackgroundColor3 = originalColor
         end
     end)
 
@@ -702,29 +720,56 @@ task.spawn(function()
     end
 end)
 
--- Make draggable
+-- Make draggable with mobile support
 local dragging = false
 local dragStart = nil
 local startPos = nil
+local lastTouchPosition = nil
 
 titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         startPos = mainFrame.Position
+        if input.UserInputType == Enum.UserInputType.Touch then
+            lastTouchPosition = input.Position
+        end
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta
+        if input.UserInputType == Enum.UserInputType.Touch then
+            if lastTouchPosition then
+                delta = input.Position - lastTouchPosition
+                lastTouchPosition = input.Position
+            else
+                delta = Vector2.new(0, 0)
+            end
+        else
+            delta = input.Position - dragStart
+        end
+        
+        -- Ensure smooth dragging with bounds checking
+        local viewportSize = workspace.CurrentCamera.ViewportSize
+        local newPosition = UDim2.new(
+            startPos.X.Scale,
+            math.clamp(startPos.X.Offset + delta.X, 0, viewportSize.X - mainFrame.AbsoluteSize.X),
+            startPos.Y.Scale,
+            math.clamp(startPos.Y.Offset + delta.Y, 0, viewportSize.Y - mainFrame.AbsoluteSize.Y)
+        )
+        mainFrame.Position = newPosition
+        if input.UserInputType == Enum.UserInputType.Touch then
+            startPos = newPosition -- Update for smoother touch dragging
+        end
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
+        lastTouchPosition = nil
     end
 end)
 

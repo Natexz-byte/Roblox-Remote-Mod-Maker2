@@ -4,6 +4,12 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
+-- Error checking for essential services
+if not player then
+    error("LocalPlayer not found")
+    return
+end
+
 --// GUI Setup
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "GameModMenu"
@@ -12,17 +18,7 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 -- Main Frame with modern design
-local mainFrame = Ins--// Execute button with updated text and mobile support
-    local runButton = Instance.new("TextButton")
-    runButton.Size = UDim2.new(0.15, 0, 0.3, 0)
-    runButton.Position = UDim2.new(0.83, 0, 0.65, 0)  -- Aligned with EVENT/FUNCTION label
-    runButton.Text = "RUN"
-    runButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-    runButton.TextColor3 = Color3.new(1, 1, 1)
-    runButton.Font = Enum.Font.GothamBold
-    runButton.TextSize = 12
-    runButton.Parent = container
-    runButton.AutoButtonColor = true -- Better visual feedback on mobile"Frame")
+local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 500, 0, 400)  -- Reduced size
 mainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
@@ -141,10 +137,10 @@ tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     tabContainer.CanvasSize = UDim2.new(0, tabLayout.AbsoluteContentSize.X + 10, 0, 0)
 end)
 
--- Content container for each tab
+-- Content container for each tab with enhanced mobile layout
 local contentContainer = Instance.new("Frame")
-contentContainer.Size = UDim2.new(1, -20, 1, -110)
-contentContainer.Position = UDim2.new(0, 10, 0, 110)
+contentContainer.Size = UserInputService.TouchEnabled and UDim2.new(1, -10, 1, -120) or UDim2.new(1, -20, 1, -110)
+contentContainer.Position = UserInputService.TouchEnabled and UDim2.new(0, 5, 0, 110) or UDim2.new(0, 10, 0, 110)
 contentContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 contentContainer.BorderSizePixel = 0
 contentContainer.Parent = mainFrame
@@ -169,17 +165,29 @@ local tabs = {
 }
 
 for _, tabInfo in ipairs(tabs) do
-    -- Create tab button with fixed width
+    -- Create tab button with adaptive width for mobile
     local tabButton = Instance.new("TextButton")
-    tabButton.Size = UDim2.new(0, 100, 1, -10)
+    tabButton.Size = UserInputService.TouchEnabled and UDim2.new(0, 120, 1, -10) or UDim2.new(0, 100, 1, -10)
     tabButton.Position = UDim2.new(0, 5, 0, 5)
     tabButton.BackgroundColor3 = tabInfo.color
     tabButton.BackgroundTransparency = 0.5
     tabButton.Text = tabInfo.name
     tabButton.TextColor3 = Color3.new(1, 1, 1)
     tabButton.Font = Enum.Font.GothamBold
-    tabButton.TextSize = 14
+    tabButton.TextSize = UserInputService.TouchEnabled and 16 or 14
     tabButton.Parent = tabContainer
+    
+    -- Add hover and press effects
+    tabButton.MouseEnter:Connect(function()
+        if tabButton ~= activeTab then
+            tabButton.BackgroundTransparency = 0.3
+        end
+    end)
+    tabButton.MouseLeave:Connect(function()
+        if tabButton ~= activeTab then
+            tabButton.BackgroundTransparency = 0.5
+        end
+    end)
     
     local tabButtonCorner = Instance.new("UICorner")
     tabButtonCorner.CornerRadius = UDim.new(0, 6)
@@ -357,23 +365,53 @@ end
 local function parseArgs(argText)
     if not argText or argText == "" then return {} end
     
-    -- Basic validation
-    if string.match(argText, "[^%w%s,%.\"'%-_%[%]{}]") then
-        return {}  -- Return empty if suspicious characters found
+    local args = {}
+    local current = ""
+    local inString = false
+    local stringChar = nil
+    
+    -- Simple parser that handles strings and basic types
+    for i = 1, #argText do
+        local char = argText:sub(i, i)
+        if char == '"' or char == "'" then
+            if not inString then
+                inString = true
+                stringChar = char
+            elseif stringChar == char then
+                inString = false
+                table.insert(args, current)
+                current = ""
+            else
+                current = current .. char
+            end
+        elseif char == "," and not inString then
+            if current ~= "" then
+                table.insert(args, current:match("^%s*(.-)%s*$")) -- Trim whitespace
+                current = ""
+            end
+        else
+            current = current .. char
+        end
     end
     
-    local success, args = pcall(function()
-        -- Create a safe wrapper
-        local code = "return {" .. argText .. "}"
-        local fn, err = loadstring(code)
-        if not fn then return {} end
-        
-        -- Execute in protected mode
-        local ok, result = pcall(fn)
-        return ok and result or {}
-    end)
+    if current ~= "" then
+        table.insert(args, current:match("^%s*(.-)%s*$")) -- Trim whitespace
+    end
     
-    return success and args or {}
+    -- Process each argument
+    for i, arg in ipairs(args) do
+        if arg:match("^%d+%.?%d*$") then -- Number
+            args[i] = tonumber(arg)
+        elseif arg:lower() == "true" then
+            args[i] = true
+        elseif arg:lower() == "false" then
+            args[i] = false
+        elseif arg:match('^".*"$') or arg:match("^'.*'$") then
+            args[i] = arg:sub(2, -2) -- Remove quotes
+        end
+    end
+    
+    return args
 end
 
 -- Initialize favorites table if it doesn't exist
@@ -443,10 +481,24 @@ local function addRemote(remote)
     
     -- Create container
     local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, -10, 0, 70)
+    container.Size = UserInputService.TouchEnabled and UDim2.new(1, -10, 0, 90) or UDim2.new(1, -10, 0, 70)
     container.BorderSizePixel = 0
     container.Name = remote.Name
     container.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    -- Add hover effect
+    local function updateHover(transparency)
+        container.BackgroundColor3 = Color3.fromRGB(
+            math.min(40 + (1-transparency) * 20, 255),
+            math.min(40 + (1-transparency) * 20, 255),
+            math.min(60 + (1-transparency) * 20, 255)
+        )
+    end
+    container.MouseEnter:Connect(function()
+        updateHover(0.8)
+    end)
+    container.MouseLeave:Connect(function()
+        updateHover(1)
+    end)
     container.Parent = tabPage.page
 
     -- Add rounded corners
@@ -602,24 +654,47 @@ local function scan(container)
     end)
 end
 
--- Start scanning process
+-- Start scanning process with improved error handling
 local function startScanning()
+    if not title then
+        warn("Title element not initialized")
+        return
+    end
+
     title.Text = "🔄 Scanning game..."
     
     local locations = {
         game:GetService("ReplicatedStorage"),
         game:GetService("StarterGui"),
         game:GetService("StarterPlayer"),
-        game:GetService("Workspace")
+        game:GetService("Workspace"),
+        game:GetService("ReplicatedFirst"),
+        game:GetService("Players").LocalPlayer.PlayerGui
     }
     
+    local successCount = 0
     for _, location in ipairs(locations) do
         if location then
-            scan(location)
+            local success = pcall(function()
+                scan(location)
+                successCount = successCount + 1
+            end)
+            if not success then
+                warn("Failed to scan location:", location.Name)
+            end
         end
     end
     
-    title.Text = "🎮 Game Mod Menu"
+    -- Update title based on scan results
+    if title and title.Parent then
+        if successCount == #locations then
+            title.Text = "🎮 Game Mod Menu"
+            print("✅ Game Mod Menu: All locations scanned successfully")
+        else
+            title.Text = "🎮 Game Mod Menu (Partial Scan)"
+            warn("⚠️ Some locations failed to scan (" .. successCount .. "/" .. #locations .. " successful)")
+        end
+    end
 end
 
 -- Start the scanning process
@@ -665,11 +740,24 @@ end
 minimizeButton.MouseButton1Click:Connect(toggleMinimize)
 minimizeButton.TouchTap:Connect(toggleMinimize)
 
--- Make minimize button more visible on mobile
+-- Enhanced mobile support for buttons
 if UserInputService.TouchEnabled then
-    minimizeButton.Size = UDim2.new(0, 40, 0, 30) -- Larger touch target
-    minimizeButton.TextSize = 20 -- Larger text
-    minimizeButton.Position = UDim2.new(1, -80, 0, 5) -- Adjust position
+    -- Make minimize button more visible and touchable
+    minimizeButton.Size = UDim2.new(0, 50, 0, 35)
+    minimizeButton.TextSize = 24
+    minimizeButton.Position = UDim2.new(1, -95, 0, 2)
+    minimizeButton.BackgroundTransparency = 0
+    
+    -- Also enhance close button for mobile
+    closeButton.Size = UDim2.new(0, 50, 0, 35)
+    closeButton.TextSize = 24
+    closeButton.Position = UDim2.new(1, -40, 0, 2)
+    closeButton.BackgroundTransparency = 0
+    
+    -- Adjust search bar for mobile
+    searchBar.Size = UDim2.new(0, 180, 0, 35)
+    searchBar.Position = UDim2.new(1, -235, 0, 2)
+    searchBar.TextSize = 16
 end
 
 --// Scan for remotes (fixed version)
@@ -758,37 +846,84 @@ task.spawn(function()
     end
 end)
 
--- Make draggable (with mobile support)
+-- Make draggable (with enhanced mobile support)
 local dragging = false
 local dragStart = nil
 local startPos = nil
+local lastTouchPosition = nil
 local isMobile = UserInputService.TouchEnabled
 
 local function beginDrag(input)
+    if isMobile and input.UserInputType == Enum.UserInputType.Touch then
+        lastTouchPosition = input.Position
+    end
     dragging = true
     dragStart = input.Position
     startPos = mainFrame.Position
+    
+    -- Visual feedback for drag start
+    if isMobile then
+        titleBar.BackgroundColor3 = Color3.fromRGB(55, 55, 75)
+    end
 end
 
 local function updateDrag(input)
-    if dragging then
-        local delta = input.Position - dragStart
-        local newPosition = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        -- Add bounds checking to keep GUI on screen
-        local viewportSize = workspace.CurrentCamera.ViewportSize
-        local frameSize = mainFrame.AbsoluteSize
-        newPosition = UDim2.new(
-            newPosition.X.Scale,
-            math.clamp(newPosition.X.Offset, 0, viewportSize.X - frameSize.X),
-            newPosition.Y.Scale,
-            math.clamp(newPosition.Y.Offset, 0, viewportSize.Y - frameSize.Y)
-        )
-        mainFrame.Position = newPosition
+    if dragging and dragStart and startPos then
+        local currentPosition = input.Position
+        local delta
+        
+        if isMobile then
+            -- Use touch position tracking for smoother mobile dragging
+            if lastTouchPosition then
+                delta = currentPosition - lastTouchPosition
+                dragStart = currentPosition
+            else
+                delta = Vector2.new(0, 0)
+            end
+            lastTouchPosition = currentPosition
+        else
+            delta = currentPosition - dragStart
+        end
+        
+        -- Only update if the delta is valid
+        if typeof(delta) == "Vector2" then
+            local newPosition = UDim2.new(
+                startPos.X.Scale, 
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale, 
+                startPos.Y.Offset + delta.Y
+            )
+            
+            -- Add bounds checking to keep GUI on screen with padding
+            local viewportSize = workspace.CurrentCamera.ViewportSize
+            local frameSize = mainFrame.AbsoluteSize
+            local padding = isMobile and 10 or 0 -- Extra padding for mobile
+            
+            if viewportSize and frameSize then
+                newPosition = UDim2.new(
+                    newPosition.X.Scale,
+                    math.clamp(newPosition.X.Offset, padding, viewportSize.X - frameSize.X - padding),
+                    newPosition.Y.Scale,
+                    math.clamp(newPosition.Y.Offset, padding, viewportSize.Y - frameSize.Y - padding)
+                )
+                
+                -- Smoothly update position
+                mainFrame.Position = newPosition
+                if isMobile then
+                    startPos = newPosition -- Update start position for smoother mobile dragging
+                end
+            end
+        end
     end
 end
 
 local function endDrag()
     dragging = false
+    lastTouchPosition = nil
+    -- Reset visual feedback
+    if isMobile then
+        titleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+    end
 end
 
 -- Mouse support
@@ -815,27 +950,52 @@ titleBar.TouchStarted:Connect(beginDrag)
 titleBar.TouchMoved:Connect(updateDrag)
 titleBar.TouchEnded:Connect(endDrag)
 
---// Start scanning
-title.Text = "🔄 Scanning game..."
-wait(0.5)
-scan(game.ReplicatedStorage)
-scan(game.Workspace)
-scan(game:GetService("StarterGui"))
-scan(game:GetService("StarterPlayer"))
+-- Start scanning is now handled by the startScanning function
+-- Remove duplicate scanning calls
 
-title.Text = "🎮 Game Mod Menu"
-print("🎮 Game Mod Menu loaded successfully!")
+-- Variable to track if we've already scanned
+local hasScanned = false
 
---// Scan for remotes
+--// Fixed scanning function with better error handling and duplicate prevention
 local function scan(container)
-    for _, obj in ipairs(container:GetDescendants()) do
-        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-            addRemote(obj)
+    if hasScanned then return end -- Prevent duplicate scanning
+    
+    if not container or not container:IsA("Instance") then
+        warn("Invalid container for scanning")
+        return
+    end
+
+    local scannedRemotes = {}
+    
+    local function processObject(obj)
+        if not obj or not obj:IsA("Instance") then return end
+        
+        -- Check if we've already processed this remote
+        if scannedRemotes[obj] then return end
+        
+        local success, err = pcall(function()
+            if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and obj.Parent then
+                scannedRemotes[obj] = true
+                addRemote(obj)
+            end
+        end)
+        
+        if not success then
+            warn("Failed to process object:", obj:GetFullName(), err)
         end
     end
-    container.DescendantAdded:Connect(function(obj)
-        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-            addRemote(obj)
+
+    -- Scan existing objects
+    local success, err = pcall(function()
+        for _, obj in ipairs(container:GetDescendants()) do
+            processObject(obj)
         end
     end)
+
+    if not success then
+        warn("Failed to scan container:", container:GetFullName(), err)
+    end
+
+    -- Watch for new objects
+    container.DescendantAdded:Connect(processObject)
 end

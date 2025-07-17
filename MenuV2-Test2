@@ -730,26 +730,32 @@ local function updateDrag(input)
     if not dragging then return end
     
     local delta = input.Position - dragStart
-    local newPosition = UDim2.new(
-        startPos.X.Scale,
-        startPos.X.Offset + delta.X,
-        startPos.Y.Scale,
-        startPos.Y.Offset + delta.Y
-    )
-    
-    -- Get screen boundaries
     local viewportSize = workspace.CurrentCamera.ViewportSize
     local frameSize = mainFrame.AbsoluteSize
-    local maxX = math.max(viewportSize.X - frameSize.X, 0)  -- Ensure maxX is not negative
-    local maxY = math.max(viewportSize.Y - frameSize.Y, 0)  -- Ensure maxY is not negative
     
-    -- Clamp position to screen bounds with padding
+    -- Calculate new absolute position
+    local targetX = startPos.X.Offset + delta.X
+    local targetY = startPos.Y.Offset + delta.Y
+    
+    -- Calculate bounds with padding
     local padding = 10
-    newPosition = UDim2.new(
-        0,
-        math.clamp(newPosition.X.Offset, padding, math.max(maxX - padding, padding)), -- Ensure max is greater than min
-        0,
-        math.clamp(newPosition.Y.Offset, padding, math.max(maxY - padding, padding))  -- Ensure max is greater than min
+    local minX = padding
+    local minY = padding
+    local maxX = viewportSize.X - frameSize.X - padding
+    local maxY = viewportSize.Y - frameSize.Y - padding
+    
+    -- Ensure bounds are valid (handle case where window is larger than viewport)
+    maxX = math.max(minX, maxX)
+    maxY = math.max(minY, maxY)
+    
+    -- Clamp position within bounds
+    local clampedX = math.clamp(targetX, minX, maxX)
+    local clampedY = math.clamp(targetY, minY, maxY)
+    
+    -- Create new position
+    local newPosition = UDim2.new(
+        0, clampedX,
+        0, clampedY
     )
     
     local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)

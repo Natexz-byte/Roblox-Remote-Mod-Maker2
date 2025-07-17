@@ -4,12 +4,6 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
--- Error checking for essential services
-if not player then
-    error("LocalPlayer not found")
-    return
-end
-
 --// GUI Setup
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "GameModMenu"
@@ -113,14 +107,12 @@ local searchCorner = Instance.new("UICorner")
 searchCorner.CornerRadius = UDim.new(0, 6)
 searchCorner.Parent = searchBar
 
--- Create tab system with scrolling
-local tabContainer = Instance.new("ScrollingFrame")
+-- Create tab system
+local tabContainer = Instance.new("Frame")
 tabContainer.Size = UDim2.new(1, -20, 0, 40)
 tabContainer.Position = UDim2.new(0, 10, 0, 60)
 tabContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 tabContainer.BorderSizePixel = 0
-tabContainer.ScrollBarThickness = 4
-tabContainer.ScrollingDirection = Enum.ScrollingDirection.X
 tabContainer.Parent = mainFrame
 
 local tabCorner = Instance.new("UICorner")
@@ -131,11 +123,6 @@ local tabLayout = Instance.new("UIListLayout")
 tabLayout.FillDirection = Enum.FillDirection.Horizontal
 tabLayout.Padding = UDim.new(0, 5)
 tabLayout.Parent = tabContainer
-
--- Update canvas size when tabs are added
-tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    tabContainer.CanvasSize = UDim2.new(0, tabLayout.AbsoluteContentSize.X + 10, 0, 0)
-end)
 
 -- Content container for each tab
 local contentContainer = Instance.new("Frame")
@@ -149,7 +136,7 @@ local contentCorner = Instance.new("UICorner")
 contentCorner.CornerRadius = UDim.new(0, 8)
 contentCorner.Parent = contentContainer
 
--- Create tab pages with improved layout
+-- Create tab pages
 local tabPages = {}
 local activeTab = nil
 local tabs = {
@@ -159,13 +146,46 @@ local tabs = {
     {name = "Combat", color = Color3.fromRGB(255, 85, 85)},
     {name = "Teleport", color = Color3.fromRGB(85, 255, 127)},
     {name = "Player", color = Color3.fromRGB(170, 170, 255)},
-    {name = "Game", color = Color3.fromRGB(170, 85, 255)},  -- Added for gamemode remotes
     {name = "Favorites", color = Color3.fromRGB(255, 223, 85)},
     {name = "Other", color = Color3.fromRGB(170, 170, 170)}
 }
 
+-- Favorites system
+local favorites = {}
+local function toggleFavorite(remote)
+    local id = remote:GetFullName()
+    if favorites[id] then
+        favorites[id] = nil
+    else
+        favorites[id] = remote
+    end
+    updateFavorites()
+end
+
+local function updateFavorites()
+    local favoritesPage = tabPages["favorites"].page
+    for _, child in ipairs(favoritesPage:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+    for _, remote in pairs(favorites) do
+        addRemote(remote, true)
+    end
+end
+
+-- Preset arguments for common remote types
+local presetArgs = {
+    Give = {"amount", "itemName", "quantity", "1", "true"},
+    Stats = {"value", "amount", "10", "100", "max"},
+    Currency = {"amount", "1000", "10000", "100000"},
+    Combat = {"damage", "100", "weapon", "true"},
+    Teleport = {"position", "place", "location", "spawn"},
+    Player = {"name", "value", "setting", "true", "false"}
+}
+
 for _, tabInfo in ipairs(tabs) do
-    -- Create tab button with fixed width
+    -- Create tab button
     local tabButton = Instance.new("TextButton")
     tabButton.Size = UDim2.new(0, 100, 1, -10)
     tabButton.Position = UDim2.new(0, 5, 0, 5)
@@ -181,7 +201,7 @@ for _, tabInfo in ipairs(tabs) do
     tabButtonCorner.CornerRadius = UDim.new(0, 6)
     tabButtonCorner.Parent = tabButton
     
-    -- Create content page with auto-sizing
+    -- Create content page
     local contentPage = Instance.new("ScrollingFrame")
     contentPage.Size = UDim2.new(1, -10, 1, -10)
     contentPage.Position = UDim2.new(0, 5, 0, 5)
@@ -195,18 +215,13 @@ for _, tabInfo in ipairs(tabs) do
     contentLayout.Padding = UDim.new(0, 5)
     contentLayout.Parent = contentPage
     
-    -- Auto-update content size
-    contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        contentPage.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 10)
-    end)
-    
     tabPages[tabInfo.name:lower()] = {
         button = tabButton,
         page = contentPage,
         layout = contentLayout
     }
     
-    -- Tab button click handler with visual feedback
+    -- Tab button click handler
     tabButton.MouseButton1Click:Connect(function()
         if activeTab then
             activeTab.button.BackgroundTransparency = 0.5
@@ -215,16 +230,6 @@ for _, tabInfo in ipairs(tabs) do
         activeTab = tabPages[tabInfo.name:lower()]
         activeTab.button.BackgroundTransparency = 0
         activeTab.page.Visible = true
-        
-        -- Visual feedback
-        local originalColor = tabButton.BackgroundColor3
-        tabButton.BackgroundColor3 = Color3.new(
-            math.min(1, originalColor.R * 1.2),
-            math.min(1, originalColor.G * 1.2),
-            math.min(1, originalColor.B * 1.2)
-        )
-        wait(0.2)
-        tabButton.BackgroundColor3 = originalColor
     end)
 end
 
@@ -317,10 +322,7 @@ local pathKeywords = {
     }
 }
 
---// Get remote category with fallback
 local function getRemoteCategory(remote)
-    if not remote then return "other" end
-    
     local fullPath = remote:GetFullName():lower()
     local name = remote.Name:lower()
     
@@ -328,8 +330,6 @@ local function getRemoteCategory(remote)
     for category, paths in pairs(pathKeywords) do
         for _, path in ipairs(paths) do
             if string.find(fullPath, path:lower()) then
-                -- Map gamemode to game
-                if category == "gamemode" then return "game" end
                 return category
             end
         end
@@ -339,8 +339,6 @@ local function getRemoteCategory(remote)
     for category, keywordList in pairs(keywords) do
         for _, keyword in ipairs(keywordList) do
             if string.find(name, keyword:lower()) then
-                -- Map gamemode to game
-                if category == "gamemode" then return "game" end
                 return category
             end
         end
@@ -349,332 +347,459 @@ local function getRemoteCategory(remote)
     return "other"
 end
 
---// Parse argument input into Lua values with better security
+--// Parse argument input into Lua values
 local function parseArgs(argText)
-    if not argText or argText == "" then return {} end
+    if argText == "" then return {} end
     
-    local args = {}
-    local current = ""
-    local inString = false
-    local stringChar = nil
-    
-    -- Simple parser that handles strings and basic types
-    for i = 1, #argText do
-        local char = argText:sub(i, i)
-        if char == '"' or char == "'" then
-            if not inString then
-                inString = true
-                stringChar = char
-            elseif stringChar == char then
-                inString = false
-                table.insert(args, current)
-                current = ""
-            else
-                current = current .. char
-            end
-        elseif char == "," and not inString then
-            if current ~= "" then
-                table.insert(args, current:match("^%s*(.-)%s*$")) -- Trim whitespace
-                current = ""
-            end
-        else
-            current = current .. char
-        end
-    end
-    
-    if current ~= "" then
-        table.insert(args, current:match("^%s*(.-)%s*$")) -- Trim whitespace
-    end
-    
-    -- Process each argument
-    for i, arg in ipairs(args) do
-        if arg:match("^%d+%.?%d*$") then -- Number
-            args[i] = tonumber(arg)
-        elseif arg:lower() == "true" then
-            args[i] = true
-        elseif arg:lower() == "false" then
-            args[i] = false
-        elseif arg:match('^".*"$') or arg:match("^'.*'$") then
-            args[i] = arg:sub(2, -2) -- Remove quotes
-        end
-    end
-    
-    return args
-end
-
--- Initialize favorites table if it doesn't exist
-local favorites = {}
-
--- Initialize preset arguments
-local presetArgs = {
-    Give = {"amount", "itemName", "quantity", "1", "true"},
-    Stats = {"value", "amount", "10", "100", "max"},
-    Currency = {"amount", "1000", "10000", "100000"},
-    Combat = {"damage", "100", "weapon", "true"},
-    Teleport = {"position", "place", "location", "spawn"},
-    Player = {"name", "value", "setting", "true", "false"}
-}
-
--- Filter function to check if remote belongs to the local player
-local function isPlayerRemote(remote)
-    local path = remote:GetFullName():lower()
-    local playerName = Players.LocalPlayer.Name:lower()
-    
-    -- Check if remote is in player's character or backpack
-    if string.find(path, playerName) then
-        return true
-    end
-    
-    -- Check if remote is in ReplicatedStorage (shared remotes)
-    if string.find(path, "replicatedstorage") then
-        return true
-    end
-    
-    -- Check if remote is in StarterGui or StarterPlayer (UI related)
-    if string.find(path, "startergui") or string.find(path, "starterplayer") then
-        return true
-    end
-    
-    return false
-end
-
---// Add remote to UI (improved version with better organization)
-local function addRemote(remote)
-    -- Basic validation with error handling
-    local success, result = pcall(function()
-        if not remote or not remote:IsA("RemoteEvent") and not remote:IsA("RemoteFunction") then 
-            return false
-        end
-        
-        -- Only show remotes relevant to the local player
-        if not isPlayerRemote(remote) then
-            return false
-        end
-        
-        return true
+    local success, args = pcall(function()
+        return loadstring("return {" .. argText .. "}")()
     end)
+    return success and args or {}
+end
+
+--// Add remote to UI with enhanced styling (fixed version)
+local function addRemote(remote)
+    if not remote or not remote.Parent then return end
     
-    if not success or not result then
-        warn("Failed to add remote:", remote and remote:GetFullName() or "nil")
-        return
-    end
+    -- Ensure we have a valid category
+    local category = (type(remote) == "userdata" and remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction"))
+        and getRemoteCategory(remote) or "other"
     
-    -- Get category and validate tab page exists
-    local category = getRemoteCategory(remote)
     local tabPage = tabPages[category:lower()]
-    if not tabPage or not tabPage.page then
-        tabPage = tabPages["other"]
-        if not tabPage then return end
-    end
+    if not tabPage then return end
     
-    -- Create container
     local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, -10, 0, 70)
+    container.Size = UDim2.new(1, -10, 0, 70)  -- Reduced height
     container.BorderSizePixel = 0
     container.Name = remote.Name
     container.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
     container.Parent = tabPage.page
+    
+    -- Protection against errors
+    local success, err = pcall(function()
+        local containerCorner = Instance.new("UICorner")
+        containerCorner.CornerRadius = UDim.new(0, 6)
+        containerCorner.Parent = container
+        
+        -- Remote name label
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Size = UDim2.new(0.6, 0, 0.4, 0)
+        nameLabel.Position = UDim2.new(0, 10, 0, 5)
+        nameLabel.Text = remote.Name
+        nameLabel.TextColor3 = Color3.new(1, 1, 1)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.TextSize = 14
+        nameLabel.TextWrapped = true
+        nameLabel.Parent = container
+        
+        -- Path label (shortened)
+        local pathLabel = Instance.new("TextLabel")
+        pathLabel.Size = UDim2.new(0.6, 0, 0.3, 0)
+        pathLabel.Position = UDim2.new(0, 10, 0.4, 0)
+        local fullPath = remote:GetFullName()
+        -- Shorten the path if it's too long
+        local shortPath = fullPath:gsub(remote.Name .. "$", "")
+        if #shortPath > 40 then
+            shortPath = "..." .. shortPath:sub(-37)
+        end
+        pathLabel.Text = shortPath
+        pathLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        pathLabel.BackgroundTransparency = 1
+        pathLabel.TextXAlignment = Enum.TextXAlignment.Left
+        pathLabel.Font = Enum.Font.Gotham
+        pathLabel.TextSize = 10
+        pathLabel.TextWrapped = true
+        pathLabel.Parent = container
 
-    -- Add rounded corners
-    local containerCorner = Instance.new("UICorner")
-    containerCorner.CornerRadius = UDim.new(0, 6)
-    containerCorner.Parent = container
+        -- Add copy button for the remote path
+        createCopyButton(container, fullPath)
 
-    -- Create main elements
-    -- Name label
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(0.6, 0, 0.4, 0)
-    nameLabel.Position = UDim2.new(0, 10, 0, 5)
-    nameLabel.Text = remote.Name
-    nameLabel.TextColor3 = Color3.new(1, 1, 1)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.TextSize = 14
-    nameLabel.TextWrapped = true
-    nameLabel.Parent = container
+        -- Type indicator with enhanced styling
+        local typeLabel = Instance.new("TextLabel")
+        typeLabel.Size = UDim2.new(0.15, 0, 0.3, 0)
+        typeLabel.Position = UDim2.new(0.65, 0, 0.1, 0)
+        local isEvent = remote:IsA("RemoteEvent")
+        typeLabel.Text = isEvent and "EVENT" or "FUNCTION"
+        typeLabel.BackgroundColor3 = isEvent and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(200, 100, 200)
+        typeLabel.TextColor3 = Color3.new(1, 1, 1)
+        typeLabel.Font = Enum.Font.GothamBold
+        typeLabel.TextSize = 10
+        typeLabel.TextXAlignment = Enum.TextXAlignment.Center
+        typeLabel.Parent = container
+        
+        local typeCorner = Instance.new("UICorner")
+        typeCorner.CornerRadius = UDim.new(0, 3)
+        typeCorner.Parent = typeLabel
 
-    -- Path label
-    local fullPath = remote:GetFullName()
-    local shortPath = fullPath:gsub(remote.Name .. "$", "")
-    if #shortPath > 40 then
-        shortPath = "..." .. shortPath:sub(-37)
-    end
+        -- Status indicator for last execution
+        local statusLabel = Instance.new("TextLabel")
+        statusLabel.Size = UDim2.new(0.15, 0, 0.2, 0)
+        statusLabel.Position = UDim2.new(0.65, 0, 0.45, 0)
+        statusLabel.Text = ""
+        statusLabel.BackgroundTransparency = 1
+        statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        statusLabel.Font = Enum.Font.Gotham
+        statusLabel.TextSize = 10
+        statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+        statusLabel.Parent = container
 
-    local pathLabel = Instance.new("TextLabel")
-    pathLabel.Size = UDim2.new(0.6, 0, 0.3, 0)
-    pathLabel.Position = UDim2.new(0, 10, 0.4, 0)
-    pathLabel.Text = shortPath
-    pathLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    pathLabel.BackgroundTransparency = 1
-    pathLabel.TextXAlignment = Enum.TextXAlignment.Left
-    pathLabel.Font = Enum.Font.Gotham
-    pathLabel.TextSize = 10
-    pathLabel.TextWrapped = true
-    pathLabel.Parent = container
+        -- Arguments input with auto-complete
+        local argsInput = Instance.new("TextBox")
+        argsInput.Size = UDim2.new(0.7, 0, 0.3, 0)
+        argsInput.Position = UDim2.new(0, 10, 0.65, 0)
+        argsInput.PlaceholderText = "Arguments (e.g., \"value\", 100, true)"
+        argsInput.Text = ""
+        argsInput.TextColor3 = Color3.new(1, 1, 1)
+        argsInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        argsInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+        argsInput.Font = Enum.Font.Gotham
+        argsInput.TextSize = 12
+        argsInput.Parent = container
+        
+        local argsCorner = Instance.new("UICorner")
+        argsCorner.CornerRadius = UDim.new(0, 4)
+        argsCorner.Parent = argsInput
 
-    -- Type indicator with aligned position
-    local typeLabel = Instance.new("TextLabel")
-    typeLabel.Size = UDim2.new(0.15, 0, 0.3, 0)
-    typeLabel.Position = UDim2.new(0.83, 0, 0.1, 0)  -- Aligned with RUN button
-    local isEvent = remote:IsA("RemoteEvent")
-    typeLabel.Text = isEvent and "EVENT" or "FUNCTION"
-    typeLabel.BackgroundColor3 = isEvent and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(200, 100, 200)
-    typeLabel.TextColor3 = Color3.new(1, 1, 1)
-    typeLabel.Font = Enum.Font.GothamBold
-    typeLabel.TextSize = 10
-    typeLabel.TextXAlignment = Enum.TextXAlignment.Center
-    typeLabel.Parent = container
+        -- Error display
+        local errorLabel = Instance.new("TextLabel")
+        errorLabel.Size = UDim2.new(0.7, 0, 0, 0)
+        errorLabel.Position = UDim2.new(0, 10, 0.95, 0)
+        errorLabel.Text = ""
+        errorLabel.BackgroundTransparency = 1
+        errorLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        errorLabel.Font = Enum.Font.Gotham
+        errorLabel.TextSize = 10
+        errorLabel.TextXAlignment = Enum.TextXAlignment.Left
+        errorLabel.Visible = false
+        errorLabel.Parent = container
 
-    local typeCorner = Instance.new("UICorner")
-    typeCorner.CornerRadius = UDim.new(0, 3)
-    typeCorner.Parent = typeLabel
+        -- Preset arguments dropdown
+        local presetButton = Instance.new("TextButton")
+        presetButton.Size = UDim2.new(0.15, 0, 0.3, 0)
+        presetButton.Position = UDim2.new(0.72, 0, 0.65, 0)
+        presetButton.Text = "📝"
+        presetButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+        presetButton.TextColor3 = Color3.new(1, 1, 1)
+        presetButton.Font = Enum.Font.GothamBold
+        presetButton.TextSize = 14
+        presetButton.Parent = container
+        
+        local presetCorner = Instance.new("UICorner")
+        presetCorner.CornerRadius = UDim.new(0, 4)
+        presetCorner.Parent = presetButton
 
-    -- Arguments input
-    local argsInput = Instance.new("TextBox")
-    argsInput.Size = UDim2.new(0.7, 0, 0.3, 0)
-    argsInput.Position = UDim2.new(0, 10, 0.65, 0)
-    argsInput.PlaceholderText = "Arguments (e.g., \"value\", 100, true)"
-    argsInput.Text = ""
-    argsInput.TextColor3 = Color3.new(1, 1, 1)
-    argsInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    argsInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-    argsInput.Font = Enum.Font.Gotham
-    argsInput.TextSize = 12
-    argsInput.Parent = container
+        -- Favorite button with enhanced feedback
+        local favButton = Instance.new("TextButton")
+        favButton.Size = UDim2.new(0.1, 0, 0.3, 0)
+        favButton.Position = UDim2.new(0.88, 0, 0.1, 0)
+        favButton.Text = favorites[remote:GetFullName()] and "⭐" or "☆"
+        favButton.BackgroundTransparency = 1
+        favButton.TextColor3 = Color3.fromRGB(255, 223, 85)
+        favButton.Font = Enum.Font.GothamBold
+        favButton.TextSize = 20
+        favButton.Parent = container
 
-    local argsCorner = Instance.new("UICorner")
-    argsCorner.CornerRadius = UDim.new(0, 4)
-    argsCorner.Parent = argsInput
+        favButton.MouseButton1Click:Connect(function()
+            toggleFavorite(remote)
+            favButton.Text = favorites[remote:GetFullName()] and "⭐" or "☆"
+            -- Add visual feedback
+            local originalColor = favButton.TextColor3
+            favButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            wait(0.2)
+            favButton.TextColor3 = originalColor
+        end)
 
-    -- Execute button with updated text
-    local runButton = Instance.new("TextButton")
-    runButton.Size = UDim2.new(0.15, 0, 0.3, 0)
-    runButton.Position = UDim2.new(0.83, 0, 0.65, 0)  -- Aligned with EVENT/FUNCTION label
-    runButton.Text = "RUN"
-    runButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-    runButton.TextColor3 = Color3.new(1, 1, 1)
-    runButton.Font = Enum.Font.GothamBold
-    runButton.TextSize = 12
-    runButton.Parent = container
+        -- Execute button with loading state
+        local runButton = Instance.new("TextButton")
+        runButton.Size = UDim2.new(0.15, 0, 0.3, 0)
+        runButton.Position = UDim2.new(0.83, 0, 0.65, 0)
+        runButton.Text = "EXECUTE"
+        runButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        runButton.TextColor3 = Color3.new(1, 1, 1)
+        runButton.Font = Enum.Font.GothamBold
+        runButton.TextSize = 12
+        runButton.Parent = container
+        
+        local runCorner = Instance.new("UICorner")
+        runCorner.CornerRadius = UDim.new(0, 4)
+        runCorner.Parent = runButton
 
-    local runCorner = Instance.new("UICorner")
-    runCorner.CornerRadius = UDim.new(0, 4)
-    runCorner.Parent = runButton
-
-    -- Add execute functionality with better error handling and mobile support
-    local function executeRemote()
-        local success, result = pcall(function()
-            local args = parseArgs(argsInput.Text)
+        -- Enhanced preset menu with categories
+        local presetMenu = nil
+        presetButton.MouseButton1Click:Connect(function()
+            if presetMenu then
+                presetMenu:Destroy()
+                presetMenu = nil
+                return
+            end
             
-            if remote:IsA("RemoteEvent") then
-                remote:FireServer(unpack(args))
-                return "Remote event fired successfully"
+            presetMenu = Instance.new("Frame")
+            presetMenu.Size = UDim2.new(0, 150, 0, 200)
+            presetMenu.Position = UDim2.new(0.72, 0, 0.95, 0)
+            presetMenu.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+            presetMenu.BorderSizePixel = 0
+            presetMenu.ZIndex = 10
+            presetMenu.Parent = container
+            
+            local menuCorner = Instance.new("UICorner")
+            menuCorner.CornerRadius = UDim.new(0, 6)
+            menuCorner.Parent = presetMenu
+            
+            local menuLayout = Instance.new("UIListLayout")
+            menuLayout.Padding = UDim.new(0, 5)
+            menuLayout.Parent = presetMenu
+
+            -- Add category labels and presets
+            local categoryPresets = enhancedPresets[category:sub(1,1):upper() .. category:sub(2)] or enhancedPresets["Other"] or {}
+            for label, values in pairs(categoryPresets) do
+                local categoryLabel = Instance.new("TextLabel")
+                categoryLabel.Size = UDim2.new(1, -10, 0, 20)
+                categoryLabel.Position = UDim2.new(0, 5, 0, 0)
+                categoryLabel.Text = label:upper()
+                categoryLabel.BackgroundTransparency = 1
+                categoryLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+                categoryLabel.Font = Enum.Font.GothamBold
+                categoryLabel.TextSize = 10
+                categoryLabel.Parent = presetMenu
+
+                for _, value in ipairs(values) do
+                    local presetItem = Instance.new("TextButton")
+                    presetItem.Size = UDim2.new(1, -10, 0, 25)
+                    presetItem.Position = UDim2.new(0, 5, 0, 0)
+                    presetItem.Text = tostring(value)
+                    presetItem.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+                    presetItem.TextColor3 = Color3.new(1, 1, 1)
+                    presetItem.Font = Enum.Font.Gotham
+                    presetItem.TextSize = 12
+                    presetItem.Parent = presetMenu
+                    
+                    local itemCorner = Instance.new("UICorner")
+                    itemCorner.CornerRadius = UDim.new(0, 4)
+                    itemCorner.Parent = presetItem
+                    
+                    presetItem.MouseButton1Click:Connect(function()
+                        local currentText = argsInput.Text
+                        if currentText == "" then
+                            argsInput.Text = tostring(value)
+                        else
+                            argsInput.Text = currentText .. ", " .. tostring(value)
+                        end
+                        presetMenu:Destroy()
+                        presetMenu = nil
+                    end)
+                end
+            end
+        end)
+
+        -- Hover effects
+        runButton.MouseEnter:Connect(function()
+            TweenService:Create(runButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 220, 70)}):Play()
+        end)
+        
+        runButton.MouseLeave:Connect(function()
+            TweenService:Create(runButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 200, 50)}):Play()
+        end)
+
+        -- Enhanced remote execution with error handling
+        runButton.MouseButton1Click:Connect(function()
+            -- Clear previous error
+            errorLabel.Visible = false
+            
+            -- Parse and validate arguments
+            local rawArgs = parseArgs(argsInput.Text)
+            local args = validateArgs(rawArgs)
+            
+            -- Visual feedback - loading state
+            local originalText = runButton.Text
+            runButton.Text = "⌛"
+            
+            local success, result = pcall(function()
+                if remote:IsA("RemoteEvent") then
+                    remote:FireServer(unpack(args))
+                    return "Event fired successfully"
+                elseif remote:IsA("RemoteFunction") then
+                    return remote:InvokeServer(unpack(args))
+                end
+            end)
+
+            if success then
+                -- Log successful execution
+                logRemoteExecution(remote, args, true, result)
+                
+                -- Update status
+                statusLabel.Text = "Last: Success"
+                statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+                
+                -- Visual feedback
+                runButton.Text = "✅"
+                wait(1)
+                runButton.Text = originalText
             else
-                local result = remote:InvokeServer(unpack(args))
-                return result or "Remote function called successfully"
+                -- Handle error
+                local errorMsg = handleRemoteError(remote, tostring(result))
+                
+                -- Log failed execution
+                logRemoteExecution(remote, args, false, errorMsg)
+                
+                -- Show error
+                errorLabel.Text = errorMsg
+                errorLabel.Visible = true
+                
+                -- Update status
+                statusLabel.Text = "Last: Failed"
+                statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+                
+                -- Visual feedback
+                runButton.Text = "❌"
+                wait(1)
+                runButton.Text = originalText
             end
         end)
         
-        if not success then
-            warn("Failed to execute remote:", result)
-            -- Visual feedback for error
-            local originalColor = runButton.BackgroundColor3
-            runButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-            task.wait(0.3)
-            runButton.BackgroundColor3 = originalColor
-        else
-            -- Visual feedback for success
-            local originalColor = runButton.BackgroundColor3
-            runButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-            task.wait(0.3)
-            runButton.BackgroundColor3 = originalColor
-            print("Success:", result)
-        end
-    end
+        -- Update canvas size with error protection
+        task.spawn(function()
+            if tabPage and tabPage.page and tabPage.layout then
+                tabPage.page.CanvasSize = UDim2.new(0, 0, 0, tabPage.layout.AbsoluteContentSize.Y + 10)
+            end
+        end)
+    end)
     
-    -- Add both mouse and touch support
-    runButton.MouseButton1Click:Connect(executeRemote)
-    runButton.TouchTap:Connect(executeRemote)
-    
-    -- Make button more touch-friendly if on mobile
-    if UserInputService.TouchEnabled then
-        runButton.Size = UDim2.new(0.2, 0, 0.3, 0) -- Slightly larger touch target
-    end
-
-    -- Update content size
-    local contentSize = tabPage.layout.AbsoluteContentSize
-    if contentSize then
-        tabPage.page.CanvasSize = UDim2.new(0, 0, 0, contentSize.Y + 10)
+    if not success then
+        warn("Failed to create remote UI for: " .. remote.Name .. " - " .. tostring(err))
+        if container then container:Destroy() end
     end
 end
 
---// Simplified scan function
-local function scan(container)
-    if not container then return end
-    
-    -- Scan existing remotes
-    for _, obj in ipairs(container:GetDescendants()) do
-        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-            addRemote(obj)
-        end
+-- Add remote history logging
+local remoteHistory = {}
+local maxHistorySize = 50
+
+local function logRemoteExecution(remote, args, success, result)
+    table.insert(remoteHistory, 1, {
+        remote = remote,
+        args = args,
+        success = success,
+        result = result,
+        timestamp = os.time()
+    })
+    if #remoteHistory > maxHistorySize then
+        table.remove(remoteHistory)
     end
+end
+
+-- Copy path button functionality
+local function createCopyButton(container, text)
+    local copyButton = Instance.new("TextButton")
+    copyButton.Size = UDim2.new(0.1, 0, 0.3, 0)
+    copyButton.Position = UDim2.new(0.77, 0, 0.1, 0)
+    copyButton.Text = "📋"
+    copyButton.BackgroundTransparency = 1
+    copyButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+    copyButton.Font = Enum.Font.GothamBold
+    copyButton.TextSize = 16
+    copyButton.Parent = container
     
-    -- Watch for new remotes
-    container.DescendantAdded:Connect(function(obj)
-        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-            addRemote(obj)
-        end
+    copyButton.MouseButton1Click:Connect(function()
+        setclipboard(text)
+        copyButton.Text = "✓"
+        copyButton.TextColor3 = Color3.fromRGB(50, 200, 50)
+        wait(1)
+        copyButton.Text = "📋"
+        copyButton.TextColor3 = Color3.fromRGB(200, 200, 200)
     end)
 end
 
--- Start scanning process with improved error handling
-local function startScanning()
-    if not title then
-        warn("Title element not initialized")
-        return
-    end
-
-    title.Text = "🔄 Scanning game..."
-    
-    local locations = {
-        game:GetService("ReplicatedStorage"),
-        game:GetService("StarterGui"),
-        game:GetService("StarterPlayer"),
-        game:GetService("Workspace"),
-        game:GetService("ReplicatedFirst"),
-        game:GetService("Players").LocalPlayer.PlayerGui
+-- Enhanced error handling
+local function handleRemoteError(remote, errorMsg)
+    local errorTypes = {
+        ["timeout"] = "Remote call timed out. The server might be busy.",
+        ["permission"] = "Permission denied. You might not have access to this remote.",
+        ["argument"] = "Invalid arguments provided.",
+        ["network"] = "Network error. Check your connection.",
+        ["nil"] = "Remote no longer exists.",
+        ["destroyed"] = "Remote was destroyed.",
+        ["invalid"] = "Invalid remote operation."
     }
     
-    local successCount = 0
-    for _, location in ipairs(locations) do
-        if location then
-            local success = pcall(function()
-                scan(location)
-                successCount = successCount + 1
-            end)
-            if not success then
-                warn("Failed to scan location:", location.Name)
-            end
+    local errorMsg = "Unknown error"
+    for pattern, msg in pairs(errorTypes) do
+        if string.find(string.lower(tostring(errorMsg)), pattern) then
+            errorMsg = msg
+            break
         end
     end
     
-    -- Update title based on scan results
-    if title and title.Parent then
-        if successCount == #locations then
-            title.Text = "🎮 Game Mod Menu"
-            print("✅ Game Mod Menu: All locations scanned successfully")
-        else
-            title.Text = "🎮 Game Mod Menu (Partial Scan)"
-            warn("⚠️ Some locations failed to scan (" .. successCount .. "/" .. #locations .. " successful)")
+    warn("❌ Error with remote '" .. (remote and remote.Name or "Unknown") .. "': " .. errorMsg)
+    return errorMsg
+end
+
+-- Argument validation
+local function validateArgs(args)
+    local validatedArgs = {}
+    for i, arg in ipairs(args) do
+        -- Convert string numbers to actual numbers
+        if type(arg) == "string" and tonumber(arg) then
+            arg = tonumber(arg)
+        end
+        -- Handle boolean strings
+        if type(arg) == "string" and (arg:lower() == "true" or arg:lower() == "false") then
+            arg = arg:lower() == "true"
+        end
+        validatedArgs[i] = arg
+    end
+    return validatedArgs
+end
+
+-- Enhanced preset system with common game values
+local enhancedPresets = {
+    Give = {
+        values = {"1", "10", "100", "1000", "max", "all"},
+        items = {"Coin", "Gem", "XP", "Level", "Power", "Energy"},
+        states = {"true", "false", "yes", "no", "on", "off"}
+    },
+    Stats = {
+        multipliers = {"1", "2", "5", "10", "100"},
+        levels = {"1", "10", "50", "100", "max"},
+        states = {"enabled", "disabled", "locked", "unlocked"}
+    },
+    Currency = {
+        amounts = {"100", "1000", "10000", "100000", "1000000"},
+        multipliers = {"2x", "5x", "10x", "100x"},
+        special = {"vip", "premium", "bonus", "super"}
+    }
+}
+
+-- Add to presetArgs
+for category, values in pairs(enhancedPresets) do
+    if not presetArgs[category] then
+        presetArgs[category] = {}
+    end
+    for _, valueSet in pairs(values) do
+        for _, value in ipairs(valueSet) do
+            table.insert(presetArgs[category], value)
         end
     end
 end
 
--- Start the scanning process
-task.spawn(startScanning)
+-- Search functionality
+searchBar:GetPropertyChangedSignal("Text"):Connect(function()
+    local searchText = searchBar.Text:lower()
+    for _, tabInfo in pairs(tabPages) do
+        for _, child in ipairs(tabInfo.page:GetChildren()) do
+            if child:IsA("Frame") then
+                local nameLabel = child:FindFirstChild("TextLabel")
+                if nameLabel then
+                    local name = nameLabel.Text:lower()
+                    child.Visible = searchText == "" or string.find(name, searchText)
+                end
+            end
+        end
+    end
+end)
 
---// Close button functionality
+-- Close button functionality
 closeButton.MouseButton1Click:Connect(function()
     local tween = TweenService:Create(mainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 0, 0, 0)})
     tween:Play()
@@ -683,13 +808,13 @@ closeButton.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Minimize functionality with mobile support
+-- Minimize functionality
 local minimized = false
 local originalSize = mainFrame.Size
 local originalContentSize = contentContainer.Size
 local originalContentPos = contentContainer.Position
 
-local function toggleMinimize()
+minimizeButton.MouseButton1Click:Connect(function()
     minimized = not minimized
     local targetSize = minimized and UDim2.new(0, 500, 0, 40) or originalSize
     local targetContentSize = minimized and UDim2.new(1, -20, 0, 0) or originalContentSize
@@ -702,221 +827,112 @@ local function toggleMinimize()
         Position = targetContentPos
     }):Play()
     
-    -- Update button text and size for mobile
+    -- Update button text
     minimizeButton.Text = minimized and "+" or "─"
     
     -- Hide/Show elements
     tabContainer.Visible = not minimized
     contentContainer.Visible = not minimized
-end
-
--- Add both mouse and touch support for minimize button
-minimizeButton.MouseButton1Click:Connect(toggleMinimize)
-minimizeButton.TouchTap:Connect(toggleMinimize)
-
--- Make minimize button more visible on mobile
-if UserInputService.TouchEnabled then
-    minimizeButton.Size = UDim2.new(0, 40, 0, 30) -- Larger touch target
-    minimizeButton.TextSize = 20 -- Larger text
-    minimizeButton.Position = UDim2.new(1, -80, 0, 5) -- Adjust position
-end
+end)
 
 --// Scan for remotes (fixed version)
 local function scan(container)
-    if not container or typeof(container) ~= "Instance" then
-        warn("Invalid container provided to scan function")
-        return
-    end
+    if not container then return end
     
     local function addRemoteIfValid(obj)
-        if not obj or not obj.Parent then return end
-        
-        local success, err = pcall(function()
-            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                task.spawn(function()
-                    addRemote(obj)
-                end)
-            end
-        end)
-        
-        if not success then
-            warn("Failed to process remote: " .. obj:GetFullName() .. " - " .. tostring(err))
+        if obj and (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) then
+            task.spawn(function()
+                addRemote(obj)
+            end)
         end
     end
     
-    -- Scan existing objects with error handling
-    local success, err = pcall(function()
-        for _, obj in ipairs(container:GetDescendants()) do
-            addRemoteIfValid(obj)
-        end
-    end)
-    
-    if not success then
-        warn("Failed to scan container: " .. container:GetFullName() .. " - " .. tostring(err))
-    end
-    
-    -- Watch for new objects with error handling
-    container.DescendantAdded:Connect(function(obj)
+    -- Scan existing objects
+    for _, obj in ipairs(container:GetDescendants()) do
         addRemoteIfValid(obj)
-    end)
+    end
+    
+    -- Watch for new objects
+    container.DescendantAdded:Connect(addRemoteIfValid)
 end
 
--- Start scanning with proper error handling and status updates
+-- Start scanning with proper error handling
 title.Text = "🔄 Scanning game..."
 
 local function scanGame()
-    local scanLocations = {
-        game:GetService("ReplicatedStorage"),
-        game:GetService("StarterGui"),
-        game:GetService("StarterPlayer"),
-        game:GetService("Workspace"),
-        game:GetService("ReplicatedFirst"),
-        game:GetService("StarterPack")
-    }
-    
-    local successCount = 0
-    for _, location in ipairs(scanLocations) do
-        local success = pcall(function()
-            if location then
-                scan(location)
-                successCount = successCount + 1
-            end
-        end)
+    local success = pcall(function()
+        -- Scan main locations
+        scan(game:GetService("ReplicatedStorage"))
+        scan(game:GetService("StarterGui"))
+        scan(game:GetService("StarterPlayer"))
+        scan(game:GetService("Workspace"))
         
-        if not success then
-            warn("Failed to scan location: " .. location.Name)
-        end
-    end
+        -- Additional scanning for common remote locations
+        local success, result = pcall(function()
+            scan(game:GetService("ReplicatedFirst"))
+            scan(game:GetService("StarterPack"))
+        end)
+    end)
     
-    -- Update title based on scan results
-    if successCount == #scanLocations then
+    if success then
         title.Text = "🎮 Game Mod Menu"
-        print("✅ Game Mod Menu loaded successfully!")
+        print("🎮 Game Mod Menu loaded successfully!")
     else
         title.Text = "🎮 Game Mod Menu (Partial Scan)"
-        warn("⚠️ Some locations could not be scanned (" .. successCount .. "/" .. #scanLocations .. " successful)")
+        warn("Some remotes might not have been detected.")
     end
 end
 
--- Run scanning in protected thread
-task.spawn(function()
-    local success, err = pcall(scanGame)
-    if not success then
-        warn("❌ Critical error during scanning: " .. tostring(err))
-        title.Text = "🎮 Game Mod Menu (Error)"
-    end
-end)
+-- Run scanning in a separate thread
+task.spawn(scanGame)
 
--- Make draggable (with mobile support)
+-- Make draggable
 local dragging = false
 local dragStart = nil
 local startPos = nil
-local isMobile = UserInputService.TouchEnabled
 
-local function beginDrag(input)
-    dragging = true
-    dragStart = input.Position
-    startPos = mainFrame.Position
-end
-
-local function updateDrag(input)
-    if dragging and dragStart and startPos then
-        local delta = input.Position - dragStart
-        -- Only update if the delta is valid
-        if typeof(delta) == "Vector2" then
-            local newPosition = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-            -- Add bounds checking to keep GUI on screen
-            local viewportSize = workspace.CurrentCamera.ViewportSize
-            local frameSize = mainFrame.AbsoluteSize
-            
-            -- Ensure we have valid numbers
-            if viewportSize and frameSize then
-                newPosition = UDim2.new(
-                    newPosition.X.Scale,
-                    math.clamp(newPosition.X.Offset, 0, viewportSize.X - frameSize.X),
-                    newPosition.Y.Scale,
-                    math.clamp(newPosition.Y.Offset, 0, viewportSize.Y - frameSize.Y)
-                )
-                mainFrame.Position = newPosition
-            end
-        end
-    end
-end
-
-local function endDrag()
-    dragging = false
-end
-
--- Mouse support
 titleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        beginDrag(input)
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        updateDrag(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        endDrag()
+        dragging = false
     end
 end)
 
--- Touch support
-titleBar.TouchStarted:Connect(beginDrag)
-titleBar.TouchMoved:Connect(updateDrag)
-titleBar.TouchEnded:Connect(endDrag)
+--// Start scanning
+title.Text = "🔄 Scanning game..."
+wait(0.5)
+scan(game.ReplicatedStorage)
+scan(game.Workspace)
+scan(game:GetService("StarterGui"))
+scan(game:GetService("StarterPlayer"))
 
--- Start scanning is now handled by the startScanning function
--- Remove duplicate scanning calls
+title.Text = "🎮 Game Mod Menu"
+print("🎮 Game Mod Menu loaded successfully!")
 
--- Variable to track if we've already scanned
-local hasScanned = false
-
---// Fixed scanning function with better error handling and duplicate prevention
+--// Scan for remotes
 local function scan(container)
-    if hasScanned then return end -- Prevent duplicate scanning
-    
-    if not container or not container:IsA("Instance") then
-        warn("Invalid container for scanning")
-        return
-    end
-
-    local scannedRemotes = {}
-    
-    local function processObject(obj)
-        if not obj or not obj:IsA("Instance") then return end
-        
-        -- Check if we've already processed this remote
-        if scannedRemotes[obj] then return end
-        
-        local success, err = pcall(function()
-            if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and obj.Parent then
-                scannedRemotes[obj] = true
-                addRemote(obj)
-            end
-        end)
-        
-        if not success then
-            warn("Failed to process object:", obj:GetFullName(), err)
+    for _, obj in ipairs(container:GetDescendants()) do
+        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+            addRemote(obj)
         end
     end
-
-    -- Scan existing objects
-    local success, err = pcall(function()
-        for _, obj in ipairs(container:GetDescendants()) do
-            processObject(obj)
+    container.DescendantAdded:Connect(function(obj)
+        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+            addRemote(obj)
         end
     end)
-
-    if not success then
-        warn("Failed to scan container:", container:GetFullName(), err)
-    end
-
-    -- Watch for new objects
-    container.DescendantAdded:Connect(processObject)
 end
